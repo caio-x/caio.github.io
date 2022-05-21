@@ -4,11 +4,11 @@
 
 # Site
 title: Spade-Ace
-subtitle: 'iOS Developer - Caio'
+subtitle: 'Not Just an iOS Developer'
 description: 'Spade-Ace&apos; Tech Blog'
 keywords:
 author: Caio
-language: en
+language: zh-CH
 timezone: ''
 
 # URL
@@ -99,13 +99,6 @@ ignore:
 ## Plugins: https://hexo.io/plugins/
 ## Themes: https://hexo.io/themes/
 theme: next
-
-tag_cloud:
-  textFont: Trebuchet MS, Helvetica # 字体
-  textColor: '#222' # 字体颜色
-  textHeight: 25 # 字体高度
-  outlineColor: '#00000000' # 字体背景色
-  maxSpeed: 0.1 # 标签云最大移动速度
 
 # Deployment
 ## Docs: https://hexo.io/docs/one-command-deployment
