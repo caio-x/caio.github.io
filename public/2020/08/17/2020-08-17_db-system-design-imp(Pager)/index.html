@@ -1,0 +1,1448 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="en">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+  
+  
+    
+    
+  <script src="/lib/pace/pace.min.js?v=1.0.2"></script>
+  <link href="/lib/pace/pace-theme-big-counter.min.css?v=1.0.2" rel="stylesheet">
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=6.1.0" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=6.1.0">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=6.1.0">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=6.1.0">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=6.1.0" color="#222">
+
+
+
+
+
+
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Gemini',
+    version: '6.1.0',
+    sidebar: {"position":"left","display":"post","offset":48,"b2t":true,"scrollpercent":true,"onmobile":false},
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="本文讨论的是SQLite的Pager模块。本模块在原生操作系统的基础上实现了一个抽象的基于页面的数据库文件系统。它按照固定大小的页面来管理数据，并且定义了一些接口从数据库文件中来操作这些页面。它提供了一个数据库页面的内存缓存，来帮助BTree模块加速操作数据库页面。它不仅仅是一个缓存的管理中心，同样也是实现ACID的事务管理中，以及事务回滚管理。并发控制和回滚机制对于上层模块来说是完全透明的。他">
+<meta property="og:type" content="article">
+<meta property="og:title" content="The Pager Module">
+<meta property="og:url" content="https://blog.spade-ace.tech/2020/08/17/2020-08-17_db-system-design-imp(Pager)/index.html">
+<meta property="og:site_name" content="Spade-Ace">
+<meta property="og:description" content="本文讨论的是SQLite的Pager模块。本模块在原生操作系统的基础上实现了一个抽象的基于页面的数据库文件系统。它按照固定大小的页面来管理数据，并且定义了一些接口从数据库文件中来操作这些页面。它提供了一个数据库页面的内存缓存，来帮助BTree模块加速操作数据库页面。它不仅仅是一个缓存的管理中心，同样也是实现ACID的事务管理中，以及事务回滚管理。并发控制和回滚机制对于上层模块来说是完全透明的。他">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2020/08/lLkn3u.png">
+<meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2020/08/hWBtgL.png">
+<meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2020/08/1ijSOI.png">
+<meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2020/08/It7kz3.png">
+<meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2020/08/yUn3tG.png">
+<meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2020/08/EWLiFD.png">
+<meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2020/08/zIdkXn.png">
+<meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2020/08/UK0ZuX.png">
+<meta property="article:published_time" content="2020-08-16T16:00:00.000Z">
+<meta property="article:modified_time" content="2020-08-31T07:21:34.085Z">
+<meta property="article:author" content="Caio">
+<meta property="article:tag" content="sqlite3">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2020/08/lLkn3u.png">
+
+
+
+
+
+
+  <link rel="canonical" href="https://blog.spade-ace.tech/2020/08/17/2020-08-17_db-system-design-imp(Pager)/"/>
+
+
+
+<script type="text/javascript" id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>The Pager Module | Spade-Ace</title>
+  
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style type="text/css">
+    .use-motion .motion-element,
+    .use-motion .brand,
+    .use-motion .menu-item,
+    .sidebar-inner,
+    .use-motion .post-block,
+    .use-motion .pagination,
+    .use-motion .comments,
+    .use-motion .post-header,
+    .use-motion .post-body,
+    .use-motion .collection-title { opacity: initial; }
+
+    .use-motion .logo,
+    .use-motion .site-title,
+    .use-motion .site-subtitle {
+      opacity: initial;
+      top: initial;
+    }
+
+    .use-motion {
+      .logo-line-before i { left: initial; }
+      .logo-line-after i { right: initial; }
+    }
+  </style>
+</noscript>
+
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"> 
+
+<div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Spade-Ace</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">iOS Developer - Caio</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="Toggle navigation bar">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+          
+  <li class="menu-item menu-item-home">
+    <a href="/" rel="section">
+      <i class="menu-item-icon fa fa-fw fa-home"></i> <br />Home</a>
+</li>
+
+      
+        
+        
+          
+  <li class="menu-item menu-item-archives">
+    <a href="/archives/" rel="section">
+      <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />Archives<span class="badge">23</span>
+      </a>
+</li>
+
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />Search</a>
+        </li>
+      
+    </ul>
+  
+
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off"
+             placeholder="Searching..." spellcheck="false"
+             type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+  
+
+
+
+ </div>
+    </header>
+
+    
+  
+  
+  
+    
+      
+    
+    <a href="https://github.com/caio-x" class="github-corner" target="_blank" title="Follow me on GitHub" aria-label="Follow me on GitHub"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#222; color:#fff; position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg>
+    
+      </a>
+    
+
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+    <div class="reading-progress-bar"></div>
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2020/08/17/2020-08-17_db-system-design-imp(Pager)/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/timg.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Spade-Ace">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">The Pager Module</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-08-17T00:00:00+08:00">2020-08-17</time>
+            
+
+            
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/sqlite3/" itemprop="url" rel="index"><span itemprop="name">sqlite3</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>本文讨论的是SQLite的Pager模块。本模块在原生操作系统的基础上实现了一个抽象的基于页面的数据库文件系统。它按照固定大小的页面来管理数据，并且定义了一些接口从数据库文件中来操作这些页面。它提供了一个数据库页面的内存缓存，来帮助BTree模块加速操作数据库页面。它不仅仅是一个缓存的管理中心，同样也是实现ACID的事务管理中，以及事务回滚管理。并发控制和回滚机制对于上层模块来说是完全透明的。他可以理解为一个传统数据库管理系统的持久化层。</p>
+</blockquote>
+<span id="more"></span>
+
+<h1 id="Pager模块"><a href="#Pager模块" class="headerlink" title="Pager模块"></a>Pager模块</h1><p>除了内存数据库以外，数据库都是以原生文件的形式落在磁盘上的。SQLite无法高效的直接读取和操作磁盘上的文件。当需要数据项的时候，它会从数据库文件中读取数据到主内存中，然后在内存中操作数据，在有必要的时候，还会回写到磁盘文件中去。相对于紧凑的主内存来说，一般情况下数据库文件都会很大。因为内存有限，所以一般内存中只会保留一小部分来存储的数据，而这部分内存通常就被叫做数据库缓存或者数据缓存;在SQLite的术语中，它被称为page cache。而这个缓存是在应用进程的地址空间内，而不是操作系统的地址空间。(操作系统有它自己的数据缓存。)</p>
+<p>page缓存管理器在SQLite的世界里就是Pager。它面对的是可随机访问的原生字节流的文件，并且需要将他们转换为可以随机访问的高级别的分页式的文件，而这个页面的大小是固定的。不同的数据库文件可以有不同的页面大小。区别于原生操作系统，Pager提供了一个简单可用的接口来访问数据库文件的页面。Tree模块将会使用Pager提供的接口来操作，而不会直接操作原生的数据库或者日志文件。Tree模块看到的数据库逻辑上是一个页面的数组，并且通过他们数组的下标索引来获取页面。</p>
+<p>SQLite对于每一个打开的数据库文件(或者说数据库连接)，都会有一个单独的页面缓存。当一个应用进程打开一个数据库文件的时候，Pager就会为它创建和初始化一个新的页面缓存。如果进程多次打开同一个数据库文件的时候，在默认模式下，Pager会单独为这个文件创建和初始化页面缓存多次。(SQLite提供一个高级特性，那就是所有打开同一个数据库文件的数据库连接可以共享一个页面缓存。)在使用内存数据库的时候，不会访问任何外部存储设备。但是它们也会被当做原生的数据库文件来处理，并且会被整个存储到缓存中。因此Tree模块可以使用相同的接口来操作这两类数据库。</p>
+<p>在SQLite中Pager属于最底层的模块。这是唯一的一个通过直接调用操作系统提供的I&#x2F;O API来访问原生文件的模块。它会直接读写数据库文件或者日志文件。它不会理解数据库是如何组织数据结构的。它也不会去干涉数据库的内容，或者自己去修改内容。它只需要保证存在数据库文件中的数据可以被重复地无任何修改地检索。从这个角度上来说，Pager是一个被动的模块。(它有可能会修改一些数据库文件头部记录中的信息，例如文件修改计数器file change counter。)</p>
+<p>对于每一个数据文件来说，Pager在文件和内存缓存之间转移页面内容是作为一个缓存管理器的基本功能。而这个转移对于Tree模块和一些高层模块来说是透明的。Pager就是原生系统文件和高层之间的一个媒介。它还要协调页面回写到数据库文件中去。</p>
+<p>除了缓存管理的工作之外，pager也承担了一个典型的DBMS的其他功能。它提供一个典型的事务处理系统的核心服务:事务管理，数据管理，日志管理，和锁管理。作为一个事务管理者，它通过接管并发控制和数据恢复，来实现了事务的ACID属性。它也负责原子性提交和事务的回滚。作为一个数据管理者，它通过缓存和一些文件空间管理来协调数据库文件页面的读写。作为日志管理者，它决定了在日志文件中的日志写入。作为一个锁管理者，它可以确保在操作数据库页面之前，在数据库文件上已经有了一个合理的锁。</p>
+<h1 id="Pager接口"><a href="#Pager接口" class="headerlink" title="Pager接口"></a>Pager接口</h1><p>在这一小节中，我将会给出一些Pager模块导出的接口，这些接口将会给Tree模块使用。在此之前，我们先讨论一下Pager和Tree模块之间的交互协议。</p>
+<h2 id="Pager-client调用交互协议"><a href="#Pager-client调用交互协议" class="headerlink" title="Pager-client调用交互协议"></a>Pager-client调用交互协议</h2><p>在Pager之上的模块是完全隔离了低级别的锁和日志管理机制。事实上，它们并不知道锁和日志的存在的。Tree模块把所有的事情都看做一个事务，并且它不关心事务的ACID是如何实现的。而Pager模块则把一个事务的所有活动拆分为锁、日志、以及读写数据库文件。Tree模块以页面号来向Pager中请求一个页面数据。反过来，Pager会返回一个已经加载到页面缓存中的页面数据的指针地址。在修改一个页面之前，Tree模块需要先通知Pager模块。这样Pager模块可以在日志文件中存放足够的信息来防止之后要做数据恢复，以及提前在数据库文件上加上合适的锁。在它使用完页面之后，还要通知Pager，这样如果页面数据发生改变的时候，Pager还会将数据回写到数据库文件中。</p>
+<h3 id="Pager接口结构"><a href="#Pager接口结构" class="headerlink" title="Pager接口结构"></a>Pager接口结构</h3><p>Pager模块实现了一个数据结构叫<code>Pager</code>。每一个数据库文件都是通过单独的<code>Pager</code>对象来管理的，并且每一个<code>Pager</code>也只会关联到有且仅有一个数据库文件上。(在Pager模块层中，这个对象就等同于数据库文件。)在Tree模块中，如果需要使用一个数据库文件，那么需要先创建一个Pager对象，然后在这个对象上使用一些页面操作函数。Pager模块可以使用这个对象来追溯关于文件的锁，日志文件，和数据库的状态，日志文件的状态等等。一个进程在同一个数据库文件上可以有多个<code>Pager</code>对象与之对应，每一个对象都隶属于一个数据库连接。这些对象都是被独立处理的，互不相关。(对于共享缓存的模式来说，对每一个数据库文件，只有一个<code>Pager</code>对象，所有数据库文件共享这个对象。)内存数据库也是使用这个对象作为操作句柄。</p>
+<p><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2020/08/lLkn3u.png"></p>
+<p>后面会给出一个<code>Pager</code>对象的一些成员变量。在这个对象的后面会紧跟着一片内存空间，这个空间会用来存储页面缓存、数据库文件句柄、日志文件句柄、和数据库文件名、日志文件名。</p>
+<p><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2020/08/hWBtgL.png"></p>
+<p>正如之前提到的，SQlite在一个用户事务中，执行每一个更新(insert,delete,update)操作的时候都会放在一个savepoint保存点内。同样的，应用也可以设置自己的保存点。可以同时存在多个保存点，存储在aSavepoint数组内。这个保存点的数据结构后面也有。当SQLite创建了一个保存点savepoint的时候，它就会把<code>iHdrOffset</code>这个变量置0。但是如果在某个savepoint已经激活的时候，它打开了回滚日志文件并且在文件中写入了一条记录头，那么它就会把<code>iHdrOffset</code>改为在写入回滚日志之前的最后一条记录的字节偏移。当<code>PagerSavepoint</code>对象创建的时候,<code>iOffset</code>会被设置为回滚日志的起始偏移。</p>
+<p><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2020/08/1ijSOI.png"></p>
+<h3 id="Pager接口函数"><a href="#Pager接口函数" class="headerlink" title="Pager接口函数"></a>Pager接口函数</h3><p>Pager模块实现了一系列给Tree模块使用的接口方法。为了便于后面的理解，下面先列举一些重要的接口方法，这些接口方法都是以<code>sqlite3Pager</code>开头，所有的方法都仅限SQLite内部使用。</p>
+<ol>
+<li><p>sqlite3PagerOpen:方法创建一个新的<code>Pager</code>对象，打开给定的数据库文件，创建和初始化一个空的页面缓存，并且把这个缓存的指针返还给<code>Pager</code>对象。它会根据给定的数据库名，创建&#x2F;打开一个合适的文件。数据库文件在此时并不会上锁，既没有创建日志文件，也没有执行数据库恢复操作。(数据库的恢复是会被延迟到首次从数据库中读取一个页面的时候)</p>
+</li>
+<li><p>sqlite3PagerClose:方法销毁一个<code>Pager</code>对象，并且关闭关联的已经打开的数据库文件。如果它是一个临时文件，pager还会删除掉和这个文件。如果它不是一个临时文件并且在这个方法被调用的时候，这个文件还有一个事务存在，那么这个事务就会被强制终止，并且把它的变更全部回滚。所有内存中的缓存都会失效，从用户进程地址空间内释放。在这个方法调用之后再去访问缓存都会导致崩溃。换句话说，所有的资源都被释放了。</p>
+</li>
+<li><p>sqlite3PagerGet:这个方法会给调用者从数据库文件中复制到内存中一份可用的数据页面。调用者指定了请求页面的页面号。方法返回一个拷贝到内存缓存中的页面地址。因此，缓存空间不被回收的话，它就会固定下这个拷贝的页面。在调用这个方法最开始它就会在数据库上获取一个共享锁。此时它会决定是否需要清理现有的页面缓存–如果数据库的文件变更计数器(在文件头部第24字节开始的4个字节整型)和当前缓存中的之前获取到的这个值不一样，它就会开始清理缓存。另外如果有必要的话(存在一个回滚日志文件)，数据库就会从日志文件中回滚(后面的章节会讨论日志的回滚)。如果请求的页面不在缓存中，pager就会加载请求的页面到缓存中。但是，如果目前的数据库文件小于请求的页面号，那么实际也不会触发文件读，但是内存中会依旧分配一个页面，并且全部初始化为0.(当然对于内存数据库来说，不会触发任何的文件操作。)</p>
+</li>
+<li><p>sqlite3PagerWrite:这个方法可以将请求的数据库页面对调用者是可写的。(注意这里是可写不是写入数据。)这个方法必须在Tree模块修改缓存数据之前调用，否则的话Pager并不知道某一个缓存的页面被修改了。(处于性能考虑，SQLite避免了从Tree模块到Pager模块互相拷贝数据，而是让Tree模块直接修改Pager缓存的数据。)Pager还会在数据库文件上获取一个保留锁，并且创建一个回滚日志文件。也就是说它创建了一个隐式的写事务。如果当前页面还不在日志文件中，那么它就会拷贝这个页面中的原始数据到回滚日志中去。如果这个原始的页面已经在日志文件中了，那么SQLite只会标记这个页面为写脏。如果当前的事务是在一个用户事务中，并且当前页面也已经在主回滚日志中了，那么这个方法也还会在状态日志中写入一条状态记录。</p>
+</li>
+<li><p>sqlite3PagerLookup:这个方法返回在已经请求在内存缓存中的页面。如果不在，则返回NULL。对前者来说，它会固定这个页面。</p>
+</li>
+<li><p>sqlite3PagerRef:方法给指定页面的引用计数+1。我们称这个页面被调用者固定了。如果页面在缓存的已释放链表中，这个方法会从这个已释放列表中移除该页面。</p>
+</li>
+<li><p>sqlite3PagerUnref:方法给指定页面的引用计数-1。当这个页面的引用计数降低到0的时候，我们称这个页面已经被解除固定，并且被释放了。(被释放的页面依旧存在内存中，它会存储在已释放的链表内。）当所有的页面都被解除固定了的时候，在数据库上的共享锁就会被释放，<code>Pager</code>对象就会被重置。</p>
+</li>
+<li><p>sqlite3PagerBegin:方法在相关联的数据库文件上开启一个显式的写事务。如果数据库不是一个临时数据库，它也会打开一个回滚日志文件。(对于临时数据库，回滚日志的打开会一直推迟到真正写入回滚日志的时候。)从前面可以知道隐式的写事务是由<code>sqlite3PagerWrite</code>开启的。因此，如果数据库已经保留用来准备写入了，那么这个方法就不会做任何操作。否则的话，它会首先在数据库文件上持有一个保留锁，并且如果在参数指明的情况下，它还会立刻在数据库文件上获取一个排它锁，而不是真正等到Tree模块尝试写入数据的时候。</p>
+</li>
+<li><p>sqlite3PagerCommitPhaseOne:方法在数据库文件上提交当前的事务:文件变更计数器+1，同步日志文件，把所有的变更(例如页面缓存中的脏页)同步到数据库文件中</p>
+</li>
+<li><p>sqlite3PagerCommitPhaseTwo:方法释放(包括删除、无效化、或者裁剪)日志文件。</p>
+</li>
+<li><p>sqlite3PagerRollback:方法在数据库文件上放弃当前的事务:回滚事务给数据库文件带来的所有变更，并且把数据库的锁降级到共享锁。所有的缓存页面转变为它们的原始数据内容。日志文件被释放。</p>
+</li>
+<li><p>sqlite3PagerOpenSavepoint:方法创建一个新的保存点句柄对象，为当前的数据库状态建立一个保存点。</p>
+</li>
+<li><p>sqlite3PagerSavepoint:方法释放或者回滚一个保存点。对于释放操作来说，它会释放和销毁指定的一个保存点句柄对象。对于回滚操作来说，它回滚数据库上在此保存点建立之后的所有变更，并且后面所有的保存点都会被删除。</p>
+</li>
+</ol>
+<h1 id="页面缓存"><a href="#页面缓存" class="headerlink" title="页面缓存"></a>页面缓存</h1><p>页面缓存存在于应用进程的地址空间内。（对于同一个页面来说，原生操作系统可能也会对它做一次缓存，当应用从某个文件中读取一段数据的时候，操作系统一般都会给自己拷贝一份，再给应用拷贝一份。我们不关心操作系统是如何管理它的缓存的。SQLite的缓存组织和管理独立于那些原生操作系统。）下图描述了一个典型的情况。在图中，两个进程(其中有一个是多线程的)在访问同一个数据库文件。他们有自己的缓存。甚至于同一个线程在默认操作模式下，多次打开了同一个数据库。SQLite为这些数据库连接分配了独立的缓存。通过它们自己不同的<code>Pager</code>对象来访问这些缓存。</p>
+<p><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2020/08/It7kz3.png"></p>
+<h2 id="缓存状态"><a href="#缓存状态" class="headerlink" title="缓存状态"></a>缓存状态</h2><p>页面缓存的状态(在上图中<code>Pager</code>对象中有对应的变量)决定了Pager模块可以对缓存做什么。两个变量<code>eState</code>和<code>eLock</code>控制了Pager的行为。页面缓存的总是以下7种状态之一(<code>Pager.eState</code>成员变量的值)。下图是这7种状态值的转换图。</p>
+<ol>
+<li><p><strong>PAGER_OPEN</strong>:当一个<code>Pager</code>对象创建的时候，这是它的初始状态。此时pager无法通过<code>Pager</code>对象来读或者写数据库文件。当前内存中可能没有页面缓存，缓存是空的。数据库文件上应该也没有锁，在当前数据库上没有事务。</p>
+</li>
+<li><p><strong>PAGER_READER</strong>:在这个状态的时候，当前数据库连接上至少有一个读事务，pager可以读取对应数据库文件的页面。(但是，在排他锁的模式下，读事务可能并不会打开。)</p>
+</li>
+<li><p><strong>PAGER_WRITER_LOCKED</strong>:当一个<code>Pager</code>对象在这个状态的时候，当前数据库连接上已经打开了一个写事务。pager可以在对应的数据库文件上读页面数据，但是它还没有在数据库文件或者缓存页面中做任何的变更。</p>
+</li>
+<li><p><strong>PAGER_WRITER_CACHEMOD</strong>:当一个<code>Pager</code>对象在这个状态的时候，pager给与Tree模块权限来更新缓存的页面数据，并且Tree模块可能已经对它做出了一些变更。</p>
+</li>
+<li><p><strong>PAGER_WRITER_DBMOD</strong>:当一个<code>Pager</code>对象在这个状态的时候，pager可能已经开始写数据库文件了。</p>
+</li>
+<li><p><strong>PAGER_WRITER_FINISHED</strong>:当一个<code>Pager</code>对象在这个状态的时候，pager已经完成将当前写事务中发生的所有变更的页面写入到数据库文件了。写事务已经不能再做任何的变更了，此时已经在准备提交了。</p>
+</li>
+<li><p><strong>PAGER_ERROR</strong>:出错的状态，例如I&#x2F;O失败，磁盘空间不足，内存不足等等。</p>
+</li>
+</ol>
+<p><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2020/08/yUn3tG.png"></p>
+<p>根据<code>eLock</code>变量的值，一个<code>Pager</code>对象可以是如下4中状态之一。</p>
+<ol>
+<li><p><strong>NO_LOCK</strong>:当前不在读写任何事务。</p>
+</li>
+<li><p><strong>SHARED_LOCK</strong>:Pager已经从数据库文件中读了页面数据了。在同一个时间，同一个文件上可以有多个读事务，这些读事务可以各自通过他们的<code>Pager</code>对象来访问数据库文件。此时不允许修改缓存的页面。</p>
+</li>
+<li><p><strong>RESERVED_LOCK</strong>:pager已为写入数据保留了数据库文件，但是还没有做出任何的变更。在同一时间只有一个pager可以保留指定的数据库文件。因为原始的数据库文件还没有被修改，其它的Pager依旧可以读。</p>
+</li>
+<li><p><strong>EXCLUSIVE_LOCK</strong>:pager已经把缓存页面回写到数据库文件了。此时的文件访问是独占的。当这个pager在写入的时候，没有其他的pager可以读写这个文件。</p>
+</li>
+</ol>
+<p>页面缓存开始于NO_LOCK的状态。当Tree模块首次调用<code>sqlite3PagerGet</code>方法读取任何一个页面的时候，pager就会转换到SHARED_LOCK状态。当Tree模块通过执行<code>sqlite3PagerUnref</code>方法释放所有页面的时候，pager就会转换回NO_LOCK状态。(这个时候，它应该不会清理页面缓存。)当Tree模块首次调用<code>sqlite3PagerWrite</code>方法的时候，pager就会转换到RESERVED_LOCK状态。(<code>sqlite3PagerWrite</code>方法只有在pager已经就绪读的时候才可以被调用)。pager在真正写入第一个页面到数据库文件的时候，就会转换到EXCLUSIVE_LOCK状态。在<code>sqlite3PagerRollback</code>或者<code>sqlite3PagerCommitPhasTwo</code>两个方法的执行过程中，pager会转换回NO_LOCK状态。</p>
+<ul>
+<li>对于内存数据库或者临时数据库来说，<code>Pager.eLock</code>永远是EXCLUSICE_LOCK，因为它始终是独占的。</li>
+</ul>
+<h2 id="缓存的组织结构"><a href="#缓存的组织结构" class="headerlink" title="缓存的组织结构"></a>缓存的组织结构</h2><p>每一个页面缓存都是由一个<code>PCache</code>句柄对象来管理。pager持有了这个<code>PCache</code>对象的引用(可以看上面pager的结构图)。下图描述了一个<code>PCache</code>对象的一些成员变量。SQLite支持插件化的缓存结构，用户可以自己提供一个缓存结构。它提供了它自己的插件缓存模块(由pcache1.c源码实现)，后面会讨论这个缓存实现。这个也将会是默认的缓存管理，除非用户自己提供一个。<code>PCache</code>对象的最后一个成员就是pCache,持有了这个可插件化的缓存模块。</p>
+<p><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2020/08/EWLiFD.png"></p>
+<p>通常情况下，为了加速查询一个缓存，当前持有的缓存项都会被较好的组织好。缓存空间会被分割为一个个存储槽来持有数据项。SQLite使用一个哈希表来组织已缓存的页面，并且使用页面槽来持有表中的页面。缓存是完全关联的，因此任何一个存储槽都可以存储任何页面。哈希表初始化为空。随着页面需求的增长，pager会创建新的存储槽，然后将它们插入到哈希表内。<code>PCache.nMax</code>值决定了一个缓存可以持有的最大存储槽的数量。主数据库和其他attach连接上的数据库默认值是2000，临时数据库是500。内存数据库没有这个限制，根据物理内存的大小，有多少用多少。</p>
+<p>SQLite使用一个<code>PgHdr</code>类型的对象来标识缓存中的每一个页面对象。尽管一个可插件化的缓存可以有它自己的页面头部对象，但是pager也依旧可以理解这个对象。下图描述了SQLite自己的可插件化的缓存，由<code>PCache1</code>对象表示。在哈希表中的每一个插槽都由一个类型为<code>PgHdr1</code>的头部对象表示。这个插件化的组件是可以理解这个类型的，pager对此也不透明。插槽数据就存储在<code>PgHdr1</code>对象的正前方；这个插槽的数据大小由<code>PCache1.szSize</code>变量决定。这个插槽数据持有了一个<code>PgHdr</code>对象，一个数据库页面数据，和一些私有数据，这些私有数据区域是Tree模块用来保存页面特有的内存中的控制信息。(内存数据库没有日志文件，所以它的回滚信息也记录在内存对象中。那些对象就跟随在这个私有数据区域之后:这些指针只会被pager所使用。)当pager将页面数据写入缓存的时候，这些额外的非页面数据空间会被初始化为0。缓存中的所有页面通过<code>PCache1.aphash</code>哈希数组来访问；数组大小存储在<code>PCache1.nHash</code>变量内；这个数组也会根据需要调整大小。每一个数组元素都指向一个槽桶(bucket)；桶内的所有槽都会被组织在一个无序的单向链表内。</p>
+<p><code>PgHdr</code>对象只对pager模块可见，对Tree以及更高的模块不可见。头部有很多控制变量。<code>pgno</code>代表了数据库页面的页号。<code>needSync</code>标记位表示在回写这个页面到数据库文件的时候，日志文件是否需要flush一下。<code>dirty</code>标记位表示页面是否已经被修改过了，并且新的数据还没有回写到数据库文件内。<code>nRef</code>变量是这个页面的引用计数。如果<code>nRef</code>大于0，那么这个分页就还在使用中，我们说这个页面是被固定了，否则这个页面就是非固定的，并是被释放的。<code>pDirtyNext</code>和<code>pDirtyPrev</code>指针用来将所有的脏页面链接到一起。</p>
+<p><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2020/08/zIdkXn.png"></p>
+<p><strong>缓存组</strong>:SQLite有一个选项，可以将所有<code>PCache1</code>对象放在一个组中。当这些高速缓存受到内存压力的影响时，它们可以回收彼此未固定的页面槽。</p>
+<h2 id="缓存的读取"><a href="#缓存的读取" class="headerlink" title="缓存的读取"></a>缓存的读取</h2><p>缓存的使用者无法通过地址寻址方式来访问一个缓存元素。事实上，它们甚至不知道一个页面的拷贝存储在哪个位置，当然也就不知道它们的地址了。缓存的内容是可寻址的，可以通过页号来搜索到一个页面。在管理数据的时候，它会使用<code>PCache1.apHash</code>哈希数组来讲页面号转换为一个合适的缓存存储槽。一开始，页面缓存是空的，但是随着需求的增加，页面会被主键添加到缓存中去。正如之前所提到的，为了读一个分页，调用者(Tree模块)需要调用<code>sqlite3PagerGet</code>方法，并且给定页号。这个方法将会由以下几步来请求一个页面P。</p>
+<ol>
+<li><p>搜索缓存空间。</p>
+<ul>
+<li>在页号P上应用一个非常简单的哈希算法，来计算获取<code>apHash</code>的索引号:算法就是用分页号模<code>apHash</code>数组大小</li>
+<li>在<code>apHash</code>数组上使用这个索引获取到哈希桶。</li>
+<li>通过遍历<code>pNext</code>指针来搜索这个桶。如果P页面在这里找到了，那么我们就说这个缓存命中了，它会固定一个页面(也就是将页面<code>PgHdr.nRef</code>的值+1)。并且会给调用者返回页面的内存地址。</li>
+</ul>
+</li>
+<li><p>如果页面P在缓存中没有找到，那么就认为是缓存缺失。方法就会去寻找一个空闲的插槽来加载请求的页面。(如果缓存尚未达到最大限制<code>PCache.nMax</code>，它就会创建一个新的空间的插槽。)</p>
+</li>
+<li><p>如果目前找不到一个可以使用的空闲的插槽或者也不能创建新的，它会决定某个页面是否可以释放用来给P页面复用插槽。这个称为替换插槽。(后面的小节我们会讨论这个)</p>
+</li>
+<li><p>如果这个被替换的插槽或者空闲插槽已经被标记为脏页面了，那么它就会将这个页面回写到数据库文件中去。(遵循预写日志（WAL）协议，它也会刷新日志文件)</p>
+</li>
+<li><p>两种情况。(a)如果这个P页面是小于等于文件中当前的最大页面数的，它就会从数据库文件中向空闲的插槽中读取页面P，然后固定这个页面(设置<code>PgHdr.nRef</code>为1)，然后返回页面地址给调用者。(b)如果P比当前的最大页面数量还要大，它不再读取页面，而是把整个页面初始化为0。在两种情况中，它都会把页面底部的私有区域初始化为0，不论这个页面是否是从数据库文件中读的。也都会把(<code>PgHdr.nRef</code>设为1。)</p>
+</li>
+</ol>
+<p>SQLite严格按照按需加载请求页面的策略，使得页面拉取变得非常简单。(关于这个后续还会细说。)</p>
+<p>当在缓存中的页面地址返回给调用者(Tree模块)的时候，pager并不知道调用者什么时候会对页面内容进行操作。因此对于每一个页面，SQLite有如下的一个标准协议:调用者请求(固定)一个页面，使用页面，然后释放页面。已经固定的页面是正在活跃使用中的，缓存管理器不能回收这个页面。为了避免出现所有缓存页面都被固定的场景，SQLite在缓存中需要有一个最小数量的页面，这样它就始终可以有缓存插槽来回收了，在3.7.8版本的时候这个值是10。</p>
+<h2 id="缓存的更新"><a href="#缓存的更新" class="headerlink" title="缓存的更新"></a>缓存的更新</h2><p>在获取到一个页面之后，调用者可以直接修改这个页面的内容。但是正如之前所提到的，在做出修改之前，它必须调用<code>sqlite3PagerWrite</code>方法。在方法返回之后，调用者就可以随意更新页面内容了。</p>
+<p>在首次调用<code>sqlite3PagerWrite</code>方法的时候，pager会将原始的页面内容作为一个日志记录的一部分写到回滚日志文件中，并且设置<code>PgHdr.needSync</code>标记。在此之后，当日志记录刷新到磁盘的时候，pager就会清除这个标记位。(SQLite遵循SQL协议:它直到这个页面对应的<code>needSync</code>标记位清除的时候才会将一个已修改的页面写入到数据库文件中去。)每次调用<code>sqlite3PagerWrite</code>方法的时候<code>PgHdr.dirty</code>都会被置位；只有当这个页面的内容被回写到数据库文件的时候这个标记位才会被清除。因为调用者什么时候改页面内容，pager是不知道的。数据库文件也不能实时反映页面内容的更新。因此pager遵循延迟回写数据库文件的策略。仅当pager执行缓存刷新或有选择地回收脏页时，更新才会反映到数据库文件。</p>
+<p>延迟的数据库文件更新会导致事务的内存使用增长，当内存使用到达上限的时候，缓存管理器就会执行缓存替换。</p>
+<h2 id="缓存拉取策略"><a href="#缓存拉取策略" class="headerlink" title="缓存拉取策略"></a>缓存拉取策略</h2><p>缓存拉取策略决定了什么时候将一个页面加载进缓存。按需拉取的策略只会在请求页面的时候才会将页面加载进缓存。在调用者请求页面的时候，调用者此时是阻塞的，一直到页面从数据库文件中读取完成。很多缓存系统使用了很复杂的预拉取技术提前将页面写入缓存，这样可以减少阻塞的频率。SQLite从文件中一次读一个页面，严格按照按需加载的策略，保持逻辑简单。</p>
+<h2 id="缓存管理"><a href="#缓存管理" class="headerlink" title="缓存管理"></a>缓存管理</h2><p>通常情况下，一个页面缓存的大小是有限的。除非数据库非常小，否则它一般只能持有数据库一小部分的页面。在不同的时间点，缓存需要回收掉一些页面来持有不同的页面。因此，缓存的页面需要非常小心的管理来获取性能的最大化。基本想法就是，在缓存中保留那些立刻会被请求的页面。在设计一个缓存策略的时候，我们需要考虑三件事情:</p>
+<ol>
+<li><p>每当缓存中有一个页面的时候，在数据库文件中也有这个页面的一个主副本。每当这个缓存被更新的时候，这个主副本也需要被更新。</p>
+</li>
+<li><p>对于不在缓存中的请求页面，将引用主副本，并从主副本中创建新的缓存副本</p>
+</li>
+<li><p>如果缓存已经满了，并且一个新的页面需要被放入缓存，会有一个替换算法来决定从缓存中移除掉一些旧的页面来给新的页面腾出空间。</p>
+</li>
+</ol>
+<p>因为缓存空间大小有限，我们需要回收一些缓存控件来适应将一个大的页面集合映射到一个小型的缓存插槽内(见下图)。在图里，26个主页面需要通过回收插槽的方式来映射到5个缓存插槽内。缓存管理在缓存性能和整体性能上都非常关键。在还有剩余空间的时候，对于缓存来说没什么难的。它的挑战就在于缓存已满的时候。它的职责就是哪些页面可以保留，哪些页面可以被替换出去。我们需要一个高命中率的缓存。因此对于缓存替换来说，最关键的地方就是决定那个页面可以保留。接下来我们就讨论缓存替换</p>
+<p><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2020/08/UK0ZuX.png"></p>
+<h3 id="缓存替换"><a href="#缓存替换" class="headerlink" title="缓存替换"></a>缓存替换</h3><p>缓存替换发生在缓存已经满的时候，旧的页面需要被移出去来给新的页面腾出空间。在前面提到，在页面都满了的时候，当一个请求的页面不在缓存中并且也没有可用的空闲的插槽的时候，其中的一个页面需要牺牲以被替换掉。而这个页面的选择不是一个简单的决定。之前也说过，页面的缓存是完全关联的，任何一个插槽都可以给这个新页面。由于考虑使用多个插槽进行替换，因此所选的插槽由缓存替换策略决定。替换策略的主要目标是将那些页面保留在缓存中，以便可以在不引用主副本页的情况下从缓存中满足大部​​分请求。因此缓存命中率需要非常高。如果命中率很低，那么这个缓存也不值得用来加速页面访问了。</p>
+<p>我们并不知道未来可能引用哪些页面。所以，缓存管理器通过一些启发式的或者优先的访问历史来决定替换页面。因此，通常在实践中使用的替换方案有时会在选择被替换页面时造成“错误”，当调用者立即召回被替换页面时，这种替换很快就会被撤销。如果一个页面P在被替换出去之后，又立刻被引用了，或者在再次被引用期间，其他页面一个都没有被引用，那么这个决定是比较差的。替换策略的目标是最大程度地减少错误，并最大程度地提高缓存未命中之间的时间间隔。缓存之间的主要差别就在于替换策略。在硬件和软件开发中，先进先出，最近最少使用，最少使用，时钟策略已广泛遵循高速缓存替换策略。SQLite则使用一种最近最少使用替换策略(LRU)。</p>
+<h3 id="LRU缓存替换"><a href="#LRU缓存替换" class="headerlink" title="LRU缓存替换"></a>LRU缓存替换</h3><p>LRU是一个非常流行的替换策略。它及其变体已在软件和硬件缓存开发的许多领域中成功实现。它利用对页面引用的时间局部性。(时间局部性是指在短时间内很有可能重复访问同一页面。)也就是说，一个页面在现在被访问了，那么它很有可能将会被再次访问。一个页面很长时间没有被访问了，那么它很有可能近期不会被再次访问。选择的被替换者，就是最长时间没有被访问的那一个。</p>
+<h3 id="SQLite的缓存替换"><a href="#SQLite的缓存替换" class="headerlink" title="SQLite的缓存替换"></a>SQLite的缓存替换</h3><p>SQLite把一些不活跃的页面放在一个逻辑队列中。当一个页面被取消固定的时候，pager就会将这个页面放在队列的尾部。(队列末尾的页面始终是最近访问的页面，而队列头部的页面则是最早访问过的页面。)被替换的那个页面一般都会选择队列头部的，但不一定像纯LRU方案那样总是队列的头元素。SQLite尝试从队列的开头开始找到一个插槽，以便回收该插槽不会涉及刷新日志文件。因为回收一个页面如果导致文件刷新的话，那么会减慢速度。如果能找到这么一个替换页面，那最前面的那个就会被回收。否则，SQLite就会刷新日志文件，然后回收头部的那个插槽。如果这个页面是脏页面，还会会写到数据库中。</p>
+<h1 id="事务管理"><a href="#事务管理" class="headerlink" title="事务管理"></a>事务管理</h1><p>在SQLite中Pager也是一个事务管理器，它会通过管理数据库文件上的锁，以及管理日志文件中的日志记录来确保事务的ACID。尽管SQLite锁管理器负责获取并释放文件上的锁，但pager会决定锁的模式以及获取和释放锁的时间点。它会严格遵循以下两个锁阶段，来创建一个事务的线性执行。它也决定了日志记录的内容以及何时写入日志文件。</p>
+<p>和DBMS一样，SQLite的事务管理有两个组件:1.正常处理和 2.恢复处理。在正常处理过程中，pager会在日志文件中保存一些回滚需要的信息，然后在发起回滚的时候，使用这些数据来确保回滚。下面两个小节将会讲述这两个组件。事务管理的一些细节会有单独的文章，而这里我将会从整体的角度上来看。</p>
+<h2 id="正常处理流程"><a href="#正常处理流程" class="headerlink" title="正常处理流程"></a>正常处理流程</h2><p>正常的处理流程包含了从数据库文件读页面和写页面到数据库文件，提交事务，结算子事务，设置和释放保存点。另外，pager回收插槽的选择和刷新页面缓存也是正常处理流程中的一部分。</p>
+<h3 id="读操作"><a href="#读操作" class="headerlink" title="读操作"></a>读操作</h3><p>为了在一个数据库页面上操作，调用者(Tree模块)需要调用<code>sqlite3PagerGet</code>方法。即使页面不在数据库内，也需要调用这个方法:因为新的页面会由pager创建。方法会在数据库文件上获取一个共享锁。如果获取共享锁失败，那么说明此时数据库上已经有一个与之冲突的锁，方法会返回SQLITE_BUSY给调用者。否则，它就执行缓存读，然后将页面的指针地址返回给调用者。前面提到，这个操作会固定住一个页面。</p>
+<p>从前文的图中可以看到，每一个内存页面中，后面跟了一块私有空间。这个额外的空间在从数据库文件加载或者全新创建的时候都会被初始化为0。这个空间之后会由Tree模块来再次初始化。</p>
+<p>pager首次从数据文件获取一个共享锁的时候，它可以决定文件是否需要恢复。他会寻找一个日志文件(后面会讨论文件的恢复和失败恢复)。如果这个日志文件确实存在，那么说明在之前的事务执行过程中出现了一次失败，并且pager在调用<code>sqlite3PagerGet</code>返回之前，会回滚那次失败的事务，并且释放这个日志文件。</p>
+<p>如上所述，一个已经请求过的页面可能并不会在页面缓存中。在那个情况下，pager找到一个空闲的缓存插槽并且从数据库文件中加载页面，整个过程对用户是透明的。获取一个空闲的缓存插销也可能会导致一次数据库文件的写入，即缓存的刷新。</p>
+<h3 id="写操作"><a href="#写操作" class="headerlink" title="写操作"></a>写操作</h3><p>在修改一个页面之前，调用者(Tree模块)必须先固定住这个页面(通过调用<code>sqlite3PagerGet</code>方法)。然后在通过<code>sqlite3PagerWrite</code>方法，让对应的页面变得可写。一旦变成可写状态，调用者就可以随意更改内容，且不用通知pager。写入一个页面并不会导致缓存的刷新。尽管pager可能需要在数据库上请求一个保留锁。首次调用<code>sqlite3PagerWrite</code>方法的时候，pager就会在数据库文件上获取一个保留锁。这个保留锁的意思就是即将要写入数据库了。同时只能有一个事务可以持有一个保留锁。如果pager无法获取这个锁，那就意味着在文件上有其他的事务获取了同级或者更高级的锁。在这个情况下，pager就会返回SQLITE_BUSY给调用者。</p>
+<p>pager首次请求保留锁的时候，我们称之为读事务升级为写事务。(对用户事务或者系统事务来说都一样。)在这个时间点，pager创建并打开一个回滚日志文件。(回滚日志文件也在与数据库的同级目录下，只不过后面会增加’-journal’。)它会初始化第一个分片的记录头(具体可以看日志相关的)，记录下数据库文件的原始大小，然后把记录写入日志文件。如果数据库文件大小因为事务而扩大了，那么只需要按照这个原始大小裁剪就可以了，因为新的页面都是往数据库后面添加的。</p>
+<p>为了让一个页面可写，pager会把这个页面的原始内容写到回滚日志文件中。新创建的分页不会记录log，因为它本身就没有旧的数据。一个页面最多写入一次回滚日志文件。对数据库的变更不会立刻写入数据库文件。这些变更会先在内存中持有。数据库文件中依旧是未改变的，也就意味着，其他事务还能继续从文件中读。</p>
+<p><strong>扇区记录</strong>:如果存储设备中的扇区可以存储超过一个数据库页面，SQLite会log整个扇区，而不是仅仅只有被改变的页面。</p>
+<p><strong>页面log策略</strong>:一旦当有一个页面额镜像数据被拷贝到回滚日志中，尽管当前的事务再去多次调用<code>sqlite3PagerWrite</code>方法，页面也不会出现在后续新的日志记录中了。这个日志记录方式有一个好处就是，一个页面可以无脑的从日志文件的数据区中恢复出来。因此撤销操作是幂等的，并且它不会产生任何补偿日志记录。</p>
+<h3 id="缓存刷新"><a href="#缓存刷新" class="headerlink" title="缓存刷新"></a>缓存刷新</h3><p>缓存刷新是pager模块的一个内部操作，调用者(Tree模块)不能直接调用缓存刷新。有两种场景pager想要把缓存刷新到内存之外(即磁盘上):1.缓存已经满了，并且需要做一次缓存替换。2.事务依旧准备好去提交它的变更了。pager会将一些或者所有已经变更的页面写入到数据库文件中去。在写入之前，pager必须保证没有其他事务正在读数据库事务了。SQLite遵循WAL协议写入数据库。也就意味着，在写入到数据库文件之前还需要刷新写入日志回滚的记录。pager遵循下面的步骤:</p>
+<ol>
+<li><p>它先判断决定是否有必要刷新日志文件。如果事务是同步的，并且已经把新数据写入到日志文件了，并且数据库文件不是一个临时文件(因为对于临时数据库我们不需要考虑断电恢复)，那么pager就需要做一次日志文件的flush刷新。在这个场景下，只需要在日志文件上执行<code>fsync</code>系统调用来确保所有的日志文件的写入已经落到磁盘上了。此时，pager没有将在日志片段头部中日志记录的数量(<code>nRec</code>)的值写入到文件中。(<code>nRec</code>值是回滚操作的关键资源。当这个片段头部构建的时候，这个值会被同步事务设置为0，被异步事务设置为-1。)在日志文件被刷新到磁盘上之后，pager就会将<code>nRec</code>值写入，然后再做一次<code>fsync</code>。因为磁盘的写入不是原子的，它不会再重写<code>nRec</code>字段。pager会为新的日志记录创建一个新的日志片段。在这些情况下，SQLite使用多段日志文件。</p>
+</li>
+<li><p>它会尝试在数据库文件上获取一个排它锁。(pager不会无条件的等待锁。他会尝试在非阻塞条件下尝试获取锁。如果其他事务还在持有共享锁，那么这个锁就会失败，然后返回SQLITE_BUSY，事务不会被终止。)</p>
+</li>
+<li><p>将所有已经修改的页面(在页面缓存中持有的)或者选中的一些回写到数据库文件中。页面写入就地完成。他它会清空缓存中这些页面的脏标记位。(此时不会立刻刷新数据库文件到磁盘。)</p>
+</li>
+</ol>
+<p>如果写入数据库文件的原因是因为缓存满了，那么pager还不会立刻提交事务。相反的，此时事务可能会继续对数据库页面做一些修改。后续的数据库写入依旧是重复这三个步骤。</p>
+<p><strong>注意</strong>:排他锁会一直持有直至数据库的事务最终完成。这也就意味着说，从第一次页面写入到数据库一直到事务提交或者终止，进程内的其他数据库连接或者其他进程内的数据库连接都无法对当前数据库发起读写事务。对于一些较短的写事务来说，数据更新都会在缓存中持有，以及排它锁只会在事务最终提交的时候才会请求。但是一个较长的写事务会导致其他读事务的性能下降。</p>
+<h3 id="提交操作"><a href="#提交操作" class="headerlink" title="提交操作"></a>提交操作</h3><p>根据提交事务是修改单个数据库还是多个数据库，SQLite遵循的提交协议略有不同。</p>
+<p><strong>单个数据库场景</strong>:当Tree模块准备提交一个事务额时候，它会先调用<code>sqlite3PagerCommitPhaseOne</code>，然后调用<code>sqlite3PagerCommitPhaseTwo</code>。提交读事务简单。pager从数据库文件上释放共享锁，然后返回到NO_LOCK状态。他它也不需要去清理页面缓存。(下一个事务开始的时候，页面缓存已经有一个”预热”了。)为了提交一个写事务，pager按照如下的步骤有序执行:</p>
+<ol>
+<li><p>在数据库文件上获取一个排他锁。(如果锁获取失败了，就会给<code>sqlite3PagerCommitPhaseOne</code>方法的调用者返回SQLITE_BUSY。它此时不能提交事务，因为此时还有其他读事务。)然后它会将数据库的metadata的文件变更计数器上+1。将缓存中所有已经发生变更的数据回写到数据库文件内。(按照上面<strong>缓存刷新</strong>小节中的1-3步骤)</p>
+</li>
+<li><p>很多操作系统例如Linux，会将这些文件写入缓存到系统内存空间中，并且不会立刻将数据回写到本地磁盘。为了避免这个场景，pager会调用<code>fsync</code>系统调用来刷新到磁盘上。这样做是为了消除系统重新启动时的重做逻辑。</p>
+</li>
+<li><p>然后，它完成（即删除，截断或使之无效）日志文件。</p>
+</li>
+<li><p>最终它会释放数据库文件上的排它锁。如果同时执行选择操作（即读取事务），它将返回SHARED_LOCK状态；否则，返回NO_LOCK状态。它也没必要去清除页面缓存。</p>
+</li>
+</ol>
+<p>单个数据库的提交点是在于他完成日志文件的时候。</p>
+<p><strong>多个数据库场景</strong>:这个提交协议涉及的更多，它类似于分布式数据库系统中的事务提交。VM模块（<code>VdbeCommit</code>函数）实际上驱动提交协议作为提交协调器。每个数据库的pager执行自己“本地”的提交操作。如果一个读事务或者写事务，只修改了单个数据库(临时数据库不算)，那么这个协议就和普通提交一样。如果修改了多个，那么就按照下面步骤执行:</p>
+<ol>
+<li><p>释放事务没有更新的那些数据库上的共享锁。(如果当前线程内的其他读事务也不再激活了。)</p>
+</li>
+<li><p>在那些发生更新的数据库文件上请求排它锁。增加数据库文件的 文件变更计数器。</p>
+</li>
+<li><p>创建一个新的主日志文件。(这个主日志文件和主数据库同级目录，同名，但是后续跟着’-mj’,以及8个十六进制的随机数。即使主数据库文件没有发生数据变更，也是如此。)在主日志文件中填充所有各个独立的回滚日志文件的名字，然后将主日志文件和日志文件目录flush到磁盘上。(临时数据库文件不包含在内。)</p>
+</li>
+<li><p>将主日志文件的名字写到各个独立的回滚日志中的主日志记录中。并且flush回滚日志到磁盘。(pager可能一直到提交事务的时候它才会知道它只是多数据库事务的一部分。)</p>
+</li>
+<li><p>flush各自的数据库文件。</p>
+</li>
+<li><p>删除主日志文件，并且flush日志文件目录。</p>
+</li>
+<li><p>完成（即删除，截断或使之无效）各自的日志文件</p>
+</li>
+<li><p>释放所有数据库文件上的排它锁。所有pager会返回到SHARED_LOCK或者NO_LOCK状态。pager无需清除页面缓存。</p>
+</li>
+</ol>
+<p>多数据库的提交点是在于他删除了主日志文件。</p>
+<p><strong>关于完成日志文件</strong>:当journal_mode持久存在时，日志文件将被截断为零大小，而不是使日志头无效。</p>
+<p><strong>注意</strong>:如果主数据库是个临时数据库或者内存数据库，SQLite是不保证多数据库事务的提交的原子性的。也就是说，全局恢复可能会有问题。它不会创建主日志文件。VM会依次挨个在每个数据库上做单独的提交。因此这个事务对于每一个数据库来说是原子的，但是期间一旦出现掉电之类的问题，可能会导致一部分数据库会执行恢复，而另一部分不会。</p>
+<p><strong>提交失败</strong>:用户事务是应用通过执行COMMIT命令自己提交的，然后SQLite尝试结束这个事务。正如之前提到的，尝试提交的事务可能会因为锁的冲突导致失败，并且返回SQLITE_BUSY。因为此时数据库上可能还有其他的读事务，如果是因为这个导致的失败，事务依旧保持激活状态，应用可以在之后再次发起尝试。SQLite不会自动做重试，需要应用自己去做。</p>
+<h3 id="语句级操作"><a href="#语句级操作" class="headerlink" title="语句级操作"></a>语句级操作</h3><p>语句级子事务被实现为在子事务结束时释放的匿名保存点。在语句子事务级别的一般操作有读，写和提交。下面我们将讨论这些。</p>
+<p><strong>读操作</strong>:语句子事务通过包含的用户事务读取页面。用户事务遵循所有规则。</p>
+<p><strong>写操作</strong>:在写事务中有两个部分:锁和日志。一个语句级的子事务通过包含的用户事务来请求锁。但是语句级的日志有一点点的不同，并且是由单独的临时语句级日志文件处理。(语句级的日志文件名是任意命名的，以<code>etilqs_</code>开头，临时文件。）pager会在语句级日志文件中写入一部分日志记录，还会在主回滚日志中写入一部分。当子事务尝试通过<code>sqlite3PagerWrite</code>操作使页面可写时，它将执行以下两个替代操作之一：</p>
+<ol>
+<li><p>如果页面不在回滚日志中，pager就会将新的日志记录添加进回滚日志中。(但是后续新的页面就不会加入log了。)</p>
+</li>
+<li><p>如果页面不在这个语句级的日志文件中，那么pager会把新的日志记录加入其中。(当语句级子事务在文件中写入第一条log记录的时候，pager就会创建语句级的日志文件。)</p>
+</li>
+</ol>
+<p>pager从来都不会flush语句级日志，因为这个从来都不需要失败恢复。如果出现了一个系统失败或掉电，主回滚日志将会负责数据库恢复。可以注意到，当一个页面即是回滚日志文件，又是语句级日志文件的时候，回滚日志文件中持有最旧版本的页面数据。</p>
+<p><strong>提交操作</strong>:语句提交非常简单，pager删除语句日志文件。(但是，看以下两个小节。)</p>
+<h3 id="设置保存点"><a href="#设置保存点" class="headerlink" title="设置保存点"></a>设置保存点</h3><p>当一个用户事务建立一个保存点的时候，SQLite就会进入保存点模式。在这个模式下，SQLite在语句提交的时候，不会删除语句级的日志。它会持有日志文件，直至事务释放了所有的保存点，或者提交事务，或者终止事务。在保存点模式下，日志记录有一点点区别:如果页面已经被前一个语句加入日志文件，那么这个页面将会被当前语句再次加入日志文件中。因此，语句级的日志对同一个数据库分页可以有多条记录。</p>
+<h3 id="释放保存点"><a href="#释放保存点" class="headerlink" title="释放保存点"></a>释放保存点</h3><p>当应用执行<code>release sp</code>命令的时候，SQLite会销毁对应的<code>PagerSavepoint</code>对象，以及那些在<code>sp</code>保存点之后建立的保存点。应用也无法再次引用那些保存点。</p>
+<h2 id="恢复处理流程"><a href="#恢复处理流程" class="headerlink" title="恢复处理流程"></a>恢复处理流程</h2><p>大部分的事务和语句子事务都是自己提交。但是偶尔情况下，一些事务和语句会自己终止。在很少的情况下，会出现一些应用和系统失败。无论哪种情况，SQLite都可能需要通过执行一些回滚操作将数据库恢复到可接受的一致状态。在前两种情况下(终止语句和事务)，恢复时会提供内存中的可靠信息。在后两种情况下(失败),数据库可能会出错，并且没有内存信息。在事务过程中，事务将还原到先前的保存点。在后面的小节内，将讨论这4个场景。</p>
+<h3 id="事务终止"><a href="#事务终止" class="headerlink" title="事务终止"></a>事务终止</h3><p>在SQLite里，从终止中恢复是很简单的。pager可能会，也可能不会从数据库文件中移除事务所带来的的影响。如果事务只持有了数据库文件上的保留锁或未决锁，那么它可以保证文件不被修改；pager完成释放日志文件，并且丢弃在页面缓存中所有的脏页面。否则，事务将会在数据库文件上持有一个排他锁，并且一些页面可能已经被事务回写到数据库文件了，pager就会执行下面的回滚操作。</p>
+<p>pager从回滚日志中一条一条读取日志记录，然后从日志记录中恢复页面数据。因此，在扫描日志文件的最后，数据库已经恢复到事务开始时的最初始状态了。如果事务已经将数据库扩展了，那么pager还会将数据库文件裁剪到原始的大小。pager会先flush数据库文件，然后接下来会完成释放回滚日志文件。它会释放排他锁，并且清空页面缓存。</p>
+<h3 id="语句级子事务终止"><a href="#语句级子事务终止" class="headerlink" title="语句级子事务终止"></a>语句级子事务终止</h3><p>正如之前所提到的，一个语句级的子事务可能同时会在回滚日志和语句级日志中添加日志记录。SQLite需要从语句级日志，以及一些主回滚日志中回滚所有的日志记录。每一个语句都会被当做一个匿名的保存点。所以一个语句的终止，就等同于恢复一个匿名保存点。我们在下面的章节中讨论这个。</p>
+<h3 id="回滚到保存点"><a href="#回滚到保存点" class="headerlink" title="回滚到保存点"></a>回滚到保存点</h3><p>在之前提到，当在保存点模式的时候，事务是不会删除语句级日志的。当事务执行了一个<code>roll to sp</code>命令的时候，SQLite同样会回滚在<code>sp</code>保存点之后建立的所有保存点。<code>PagerSavepoint</code>对象对应的三个成员变量起着至关重要的作用：<code>iOffset</code>，<code>iHdrOffset</code>和<code>iSubRec</code>。它首先回滚主回滚日志中的所有日志记录，从iOffset处开始直到日志文件结束。然后，它将回滚从<code>iSubRec</code>开始的语句日志中的所有日志记录，直到文件末尾来还原保存点。然而，在前一个情况下，如果<code>iHdrOffset</code>是非零，那么从主回滚日志中回滚日志记录会分为以下两步:(1)从<code>iOffset</code>到<code>iHdrOffset</code>以及(2)所有后续的日志段。在恢复的过程中，pager记下了哪些页面被回滚了，并确保页面不会被回滚超过一次。<code>Pager.dbSize</code>也会被回滚到保存点之前的大小(即PagerSavepoint.nOrig)。如果是恢复整个事务，那么只需要用到主回滚日志就行。SQLite会销毁所有在<code>sp</code>保存点之后创建的所有<code>PagerSavepoint</code>对象，但不包括<code>sp</code>自己。这些保存点对应用来说也都不可访问了。</p>
+<h3 id="失败恢复"><a href="#失败恢复" class="headerlink" title="失败恢复"></a>失败恢复</h3><p>在进程崩溃或者系统出错的时候，数据库文件中可能会遗留一些不一致的数据。当没有应用在更新数据库，并且存在回滚日志文件的时候，这就意味着之前的事务可能已经存在失败情况了，并且SQLite可能需要从失败带来的影响中恢复数据库。如果对应的数据库文件是未上锁或者只有共享锁的情况下，那么这个回滚日志文件可以说是激活状态的。但是如果日志文件是有多数据库事务创建的，并且没有主日志文件，那么这个日志文件并不是激活的。</p>
+<p><strong>判定日志是否激活</strong>:有两种情况:(1)如果不涉及多数据库的主日志，也就是说日志文件中没有出现主日志文件记录。如果日志文件存在，并且是有效的(有一个按格式化的日志头部并且不为0)，并且数据库文件上没有保留锁或者高于保留锁的锁，并且数据库不是空的，那么这个日志文件就是激活状态。(2)如果主数据库日志名出现在回滚日志文件中，并且主回滚日志存在，并且日志中引用了回滚日志文件，并且在对应的数据库文件上没有保留锁或者更高的锁，那么这个日志文件就是激活的。</p>
+<p><strong>警告</strong>:如果当前的应用是以只读的权限打开数据库文件，并且对文件或者对目录没有写权限，那么恢复就会失败，并且SQLite会返回特定的错误码。</p>
+<p>pager在想从数据库文件中第一次读取页面的时候，它会按照如下的恢复顺序来执行。</p>
+<ol>
+<li><p>它先在数据库文件上获取一个共享锁。(如果无法获取到这个锁，它就会返回给应用SQLITE_BUSY错误码。)</p>
+</li>
+<li><p>检查数据库上是否有一个激活的日志文件。如果数据库没有激活的日志文件，那么恢复操作就到此为止了。如果存在一个激活的日志文件，那么日志文件就会按照如下的步骤来回滚。</p>
+</li>
+<li><p>在数据库文件上获取一个排它锁。(pager不会在数据库上获取保留锁，因为这样会让其他的pager认为日志文件已经不再是激活状态了，然后它们就会直接读数据库。最后它是需要在数据库上获取一个排他锁，因为写入数据库是恢复工作的一部分。) 如果获取锁失败，那么就意味着此时有另一个pager正在尝试回滚。在那种情况下，它会释放所有的锁并且返回SQLITE_BUSY错误码给应用层。</p>
+</li>
+<li><p>从日志回滚文件中读取所有的日志记录，并且撤销这些日志(回滚)。这个操作会将数据库恢复到发生崩溃的事务开始时候的状态。并且数据库此时就在一致的状态了。如果需要的话，数据库文件还会被缩减到事务开始之前的大小。</p>
+</li>
+<li><p>flush刷新数据库文件。如果发生另一次电源故障或崩溃，这可以保护数据库的完整性。</p>
+</li>
+<li><p>释放(包括删除、无效化、或者裁剪)日志文件。</p>
+</li>
+<li><p>如果安全的话，删除主日志文件。</p>
+</li>
+<li><p>把锁降级到共享锁。(因为pager是在<code>sqlite3PagerGet</code>方法的内部执行的恢复。)</p>
+</li>
+</ol>
+<p>在以上的算法策略成功的执行之后，数据库文件此时就已经保证恢复到之前的状态了。此时再读取文件的时候就是安全的了。</p>
+<p><strong>过时的主日志文件</strong>:如果没有独立的回滚日志引用主日志文件，那么这个主日志文件就可以认为是过时的。pager会先读主日志文件，然后获取所有回滚日志文件的名字。然后，它分别检查每个回滚日记文件。如果每一个日志文件都存在，并且指向主日志文件，那么这个主日志文件就不是过时的。如果所有的回滚日志文件都不存在，或者他们指向了其他的主日志文件，或者没有指向主日志文件，那么这个主日志文件就是过时的，并且pager会删除掉这个主日志文件。没有要求说这个过时的主日志文件需要被删除。这样做的唯一原因就是为了释放磁盘空间。</p>
+<h2 id="其他的管理问题"><a href="#其他的管理问题" class="headerlink" title="其他的管理问题"></a>其他的管理问题</h2><h3 id="检查点"><a href="#检查点" class="headerlink" title="检查点"></a>检查点</h3><p>大部分数据库系统为了减小数据库失败的恢复压力，在固定的时间点都会有一个检查点。因为SQLite在同一个时间点同一个数据库上最多只会有一个写事务。日志文件中也只有当前事务的日志记录。SQLite会在事务完成的时候，处理掉日志文件。最终SQLite就不会有日志的积压，也不会需要去执行一个检查点，日志中也不会有检查点的逻辑。当事务提交的时候，数据库会保证在处理日志文件之前，将数据库的更新已经都写入数据库中了。(在SQLite3.7.0中，SQLite的开发者介绍了WAL日志特性。在这个日志模式下，会执行检查点。后续会讨论这个日志模式。)</p>
+<h3 id="空间约束"><a href="#空间约束" class="headerlink" title="空间约束"></a>空间约束</h3><p>在某些DBMS中，最麻烦的问题是日志空间不足。换句话树，就是文件系统没有足够的空间来给日志文件继续扩大写入新的日志记录。在某些DBMS中，中止事务会生成（补偿）日志记录，同时撤消某些更新，从而使情况进一步恶化。日志空间的不足可能会在那些系统中产生事务中止和系统重启的问题。但是SQLite不会，因为事务的终止不会产生任何新的日志记录。系统重启尽管也会有问题，但是只会在一些极端的场景下:事务会收缩数据库文件，并且释放的空间已经由本机文件系统分配用于其他目的。在这个情况下，恢复可能失败，因为SQLite已经无法将数据库文件恢复到原始的大小了。此时数据库就会被阻塞，直到所需的空间可用于数据库文件恢复到原始大小为止。</p>
+<p>还有一个其他的相关的问题:数据库文件没有足够的空间可以增长了。在这个场景下，pager会返回SQLITE_FULL错误码给应用，这有可能会终止事务。所以这也有可能会在SQLite中导致问题。</p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/sqlite3/" rel="tag"># sqlite3</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/07/21/20.SQLite-Tokenize/" rel="next" title="SQLite--Tokenize(词法分析器)">
+                <i class="fa fa-chevron-left"></i> SQLite--Tokenize(词法分析器)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/08/21/2020-08-21_db-system-design-imp(Transaction)/" rel="prev" title="Transaction Management">
+                Transaction Management <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/timg.gif"
+                alt="" />
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/%7C%7Carchive">
+                
+                    <span class="site-state-item-count">23</span>
+                    <span class="site-state-item-name">posts</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">6</span>
+                    <span class="site-state-item-name">categories</span>
+                  
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-tags">
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">tags</span>
+                  
+                </div>
+              
+            </nav>
+          
+
+          
+
+          
+            <div class="links-of-author motion-element">
+              
+                <span class="links-of-author-item">
+                  <a href="https://github.com/caio-x" target="_blank" title="GitHub"><i class="fa fa-fw fa-github"></i>GitHub</a>
+                  
+                </span>
+              
+                <span class="links-of-author-item">
+                  <a href="mailto:omblcky@gmail.com" target="_blank" title="E-Mail"><i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                  
+                </span>
+              
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Pager%E6%A8%A1%E5%9D%97"><span class="nav-number">1.</span> <span class="nav-text">Pager模块</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Pager%E6%8E%A5%E5%8F%A3"><span class="nav-number">2.</span> <span class="nav-text">Pager接口</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Pager-client%E8%B0%83%E7%94%A8%E4%BA%A4%E4%BA%92%E5%8D%8F%E8%AE%AE"><span class="nav-number">2.1.</span> <span class="nav-text">Pager-client调用交互协议</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Pager%E6%8E%A5%E5%8F%A3%E7%BB%93%E6%9E%84"><span class="nav-number">2.1.1.</span> <span class="nav-text">Pager接口结构</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Pager%E6%8E%A5%E5%8F%A3%E5%87%BD%E6%95%B0"><span class="nav-number">2.1.2.</span> <span class="nav-text">Pager接口函数</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%A1%B5%E9%9D%A2%E7%BC%93%E5%AD%98"><span class="nav-number">3.</span> <span class="nav-text">页面缓存</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BC%93%E5%AD%98%E7%8A%B6%E6%80%81"><span class="nav-number">3.1.</span> <span class="nav-text">缓存状态</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BC%93%E5%AD%98%E7%9A%84%E7%BB%84%E7%BB%87%E7%BB%93%E6%9E%84"><span class="nav-number">3.2.</span> <span class="nav-text">缓存的组织结构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BC%93%E5%AD%98%E7%9A%84%E8%AF%BB%E5%8F%96"><span class="nav-number">3.3.</span> <span class="nav-text">缓存的读取</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BC%93%E5%AD%98%E7%9A%84%E6%9B%B4%E6%96%B0"><span class="nav-number">3.4.</span> <span class="nav-text">缓存的更新</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BC%93%E5%AD%98%E6%8B%89%E5%8F%96%E7%AD%96%E7%95%A5"><span class="nav-number">3.5.</span> <span class="nav-text">缓存拉取策略</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BC%93%E5%AD%98%E7%AE%A1%E7%90%86"><span class="nav-number">3.6.</span> <span class="nav-text">缓存管理</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BC%93%E5%AD%98%E6%9B%BF%E6%8D%A2"><span class="nav-number">3.6.1.</span> <span class="nav-text">缓存替换</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#LRU%E7%BC%93%E5%AD%98%E6%9B%BF%E6%8D%A2"><span class="nav-number">3.6.2.</span> <span class="nav-text">LRU缓存替换</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SQLite%E7%9A%84%E7%BC%93%E5%AD%98%E6%9B%BF%E6%8D%A2"><span class="nav-number">3.6.3.</span> <span class="nav-text">SQLite的缓存替换</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BA%8B%E5%8A%A1%E7%AE%A1%E7%90%86"><span class="nav-number">4.</span> <span class="nav-text">事务管理</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%AD%A3%E5%B8%B8%E5%A4%84%E7%90%86%E6%B5%81%E7%A8%8B"><span class="nav-number">4.1.</span> <span class="nav-text">正常处理流程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AF%BB%E6%93%8D%E4%BD%9C"><span class="nav-number">4.1.1.</span> <span class="nav-text">读操作</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%86%99%E6%93%8D%E4%BD%9C"><span class="nav-number">4.1.2.</span> <span class="nav-text">写操作</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BC%93%E5%AD%98%E5%88%B7%E6%96%B0"><span class="nav-number">4.1.3.</span> <span class="nav-text">缓存刷新</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8F%90%E4%BA%A4%E6%93%8D%E4%BD%9C"><span class="nav-number">4.1.4.</span> <span class="nav-text">提交操作</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AF%AD%E5%8F%A5%E7%BA%A7%E6%93%8D%E4%BD%9C"><span class="nav-number">4.1.5.</span> <span class="nav-text">语句级操作</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AE%BE%E7%BD%AE%E4%BF%9D%E5%AD%98%E7%82%B9"><span class="nav-number">4.1.6.</span> <span class="nav-text">设置保存点</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%87%8A%E6%94%BE%E4%BF%9D%E5%AD%98%E7%82%B9"><span class="nav-number">4.1.7.</span> <span class="nav-text">释放保存点</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%81%A2%E5%A4%8D%E5%A4%84%E7%90%86%E6%B5%81%E7%A8%8B"><span class="nav-number">4.2.</span> <span class="nav-text">恢复处理流程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BA%8B%E5%8A%A1%E7%BB%88%E6%AD%A2"><span class="nav-number">4.2.1.</span> <span class="nav-text">事务终止</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AF%AD%E5%8F%A5%E7%BA%A7%E5%AD%90%E4%BA%8B%E5%8A%A1%E7%BB%88%E6%AD%A2"><span class="nav-number">4.2.2.</span> <span class="nav-text">语句级子事务终止</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9B%9E%E6%BB%9A%E5%88%B0%E4%BF%9D%E5%AD%98%E7%82%B9"><span class="nav-number">4.2.3.</span> <span class="nav-text">回滚到保存点</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A4%B1%E8%B4%A5%E6%81%A2%E5%A4%8D"><span class="nav-number">4.2.4.</span> <span class="nav-text">失败恢复</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%B6%E4%BB%96%E7%9A%84%E7%AE%A1%E7%90%86%E9%97%AE%E9%A2%98"><span class="nav-number">4.3.</span> <span class="nav-text">其他的管理问题</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%A3%80%E6%9F%A5%E7%82%B9"><span class="nav-number">4.3.1.</span> <span class="nav-text">检查点</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%A9%BA%E9%97%B4%E7%BA%A6%E6%9D%9F"><span class="nav-number">4.3.2.</span> <span class="nav-text">空间约束</span></a></li></ol></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+        <div class="back-to-top">
+          <i class="fa fa-arrow-up"></i>
+          
+            <span id="scrollpercent"><span>0</span>%</span>
+          
+        </div>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; 2019 &mdash; <span itemprop="copyrightYear">2022</span>
+  <span class="with-love" id="animate"> 
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Caio</span>
+
+  
+
+  
+</div>
+
+
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/theme-next/hexo-theme-next">NexT.Gemini</a> v6.1.0</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="//cdn.jsdelivr.net/gh/theme-next/theme-next-reading-progress@1/reading_progress.min.js"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=6.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=6.1.0"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=6.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=6.1.0"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=6.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=6.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=6.1.0"></script>
+
+
+
+  
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
+</html>

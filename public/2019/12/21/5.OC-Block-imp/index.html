@@ -106,22 +106,39 @@
 
 
 
-  <meta name="description" content="Spade-Ace&amp;apos; Tech Blog">
-<meta property="og:type" content="website">
-<meta property="og:title" content="Spade-Ace">
-<meta property="og:url" content="https://blog.spade-ace.tech/archives/index.html">
+  <meta name="description" content="Block是什么？一般来说OC上的语法糖，都可以使用 clang --rewrite-objc code.m 让clang 编译为 c 或 c++ ，由此可以窥探这些语法糖的具体实现。例如，oc的block，@autoreleasepool，@synchronized等等">
+<meta property="og:type" content="article">
+<meta property="og:title" content="老生常谈，oc block的实现">
+<meta property="og:url" content="https://blog.spade-ace.tech/2019/12/21/5.OC-Block-imp/index.html">
 <meta property="og:site_name" content="Spade-Ace">
-<meta property="og:description" content="Spade-Ace&amp;apos; Tech Blog">
+<meta property="og:description" content="Block是什么？一般来说OC上的语法糖，都可以使用 clang --rewrite-objc code.m 让clang 编译为 c 或 c++ ，由此可以窥探这些语法糖的具体实现。例如，oc的block，@autoreleasepool，@synchronized等等">
 <meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/e26327c7a8252fbb2df5b1fc39d64cda.png">
+<meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/1c595347ea6f38eb59d8d6801db5a5a0.png">
+<meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/9982c40af54e96e97aa13b0b29efdfdc.png">
+<meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/b317fc859fa2d1b0afc1477a73cc7f39.png">
+<meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/d24f45909549cba411ff8ef19e8dc548.png">
+<meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/0af0536f3686b6366a21ed365e22f437.png">
+<meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/dd51589cfa5279abd032d17d217173d6.png">
+<meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/ae2340f59a762a58e2d0edbfadc9c397.png">
+<meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/6215c228093c8e9d52dc2e9568e56fa7.png">
+<meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/29e2701bbf1eb9514c8aa230801bc576.png">
+<meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/0f6bf9053dada99721d8e83858e6e709.png">
+<meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/63595834f2342745c0191f4babc0ca94.png">
+<meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/053f17c28960744f29a443720914d877.png">
+<meta property="article:published_time" content="2019-12-20T16:00:00.000Z">
+<meta property="article:modified_time" content="2020-08-29T14:42:58.502Z">
 <meta property="article:author" content="Caio">
+<meta property="article:tag" content="object-c">
 <meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/e26327c7a8252fbb2df5b1fc39d64cda.png">
 
 
 
 
 
 
-  <link rel="canonical" href="https://blog.spade-ace.tech/archives/"/>
+  <link rel="canonical" href="https://blog.spade-ace.tech/2019/12/21/5.OC-Block-imp/"/>
 
 
 
@@ -131,7 +148,7 @@
   };
 </script>
 
-  <title>Archive | Spade-Ace</title>
+  <title>老生常谈，oc block的实现 | Spade-Ace</title>
   
 
 
@@ -178,7 +195,7 @@
     
   
 
-  <div class="container sidebar-position-left page-archive">
+  <div class="container sidebar-position-left page-post-detail">
     <div class="headband"></div>
 
     <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
@@ -303,425 +320,235 @@
           
             
 
-    
-    
-      
-      
-    
-      
-      
-    
-    
-
-  
-
-
           
           <div id="content" class="content">
             
 
+  <div id="posts" class="posts-expand">
+    
+
+  
+
   
   
   
-  <div class="post-block archive">
-    <div id="posts" class="posts-collapse">
-      <span class="archive-move-on"></span>
 
-      
+  
+    <div class="reading-progress-bar"></div>
+  
 
-      
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2019/12/21/5.OC-Block-imp/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/timg.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Spade-Ace">
+    </span>
+
+    
+      <header class="post-header">
 
         
         
+          <h1 class="post-title" itemprop="name headline">老生常谈，oc block的实现</h1>
         
 
-        
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-12-21T00:00:00+08:00">2019-12-21</time>
+            
+
+            
+            
+
+            
+          </span>
+
           
-          <div class="collection-title">
-            <h1 class="archive-year" id="archive-year-2020">2020</h1>
-          </div>
-        
-        
-
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/08/29/2020-08-29_db_system_design_imp(WAL)/" itemprop="url">
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
               
-                <span itemprop="name">WAL Mode</span>
+                <span class="post-meta-item-text">In</span>
               
-            </a>
-        
-      </h2>
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/%E8%AF%AD%E6%B3%95%E7%B3%96/" itemprop="url" rel="index"><span itemprop="name">语法糖</span></a></span>
 
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-08-29T00:00:00+08:00"
-              content="2020-08-29" >
-          08-29
-        </time>
-      </div>
+                
+                
+              
+            </span>
+          
 
-    </header>
-  </article>
+          
+            
+          
 
+          
+          
 
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
 
       
-
-        
-        
-        
-
-        
-        
-
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/08/25/2020-08-25_db-system-design-im(storage)/" itemprop="url">
-              
-                <span itemprop="name">Storage</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-08-25T00:00:00+08:00"
-              content="2020-08-25" >
-          08-25
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
-
       
 
-        
-        
-        
+      
+        <h2 id="Block是什么？"><a href="#Block是什么？" class="headerlink" title="Block是什么？"></a>Block是什么？</h2><p>一般来说OC上的语法糖，都可以使用 <code>clang --rewrite-objc code.m</code> 让clang 编译为 c 或 c++ ，由此可以窥探这些语法糖的具体实现。例如，oc的block，@autoreleasepool，<a target="_blank" rel="noopener" href="https://caio.ink/article-for-synchronized/">@synchronized</a>等等</p>
+<span id="more"></span>
 
-        
-        
+<h2 id="说明"><a href="#说明" class="headerlink" title="说明"></a>说明</h2><ol>
+<li>Block的本质是个C的Struct，所以可以像C的Struct一样使用。<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="title function_">int</span> <span class="params">(^<span class="type">blk_t</span>)</span> <span class="params">(<span class="type">int</span>)</span></span><br><span class="line"><span class="type">blk_t</span> blk = ^(<span class="type">int</span> count)&#123;<span class="keyword">return</span> count;&#125;;</span><br><span class="line"><span class="type">blk_t</span> *blkptr = &amp;blk;</span><br><span class="line">(*blkptr)(<span class="number">10</span>);</span><br></pre></td></tr></table></figure></li>
+<li>Block 没有实现截获C语言数组，只能通过指针截获。<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//const char text[] = “hello”;编译失败</span></span><br><span class="line"><span class="type">const</span> <span class="type">char</span> *text = “hello”;</span><br><span class="line"><span class="type">void</span> (^blk)(<span class="type">void</span>) = ^&#123;</span><br><span class="line">	text[<span class="number">0</span>];</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure></li>
+</ol>
+<h2 id="实验-amp-实现"><a href="#实验-amp-实现" class="headerlink" title="实验&amp;实现"></a>实验&amp;实现</h2><p>本文用一些实验，来通过实验现象来了解Block的具体实现</p>
+<h3 id="没有任何截获"><a href="#没有任何截获" class="headerlink" title="没有任何截获"></a>没有任何截获</h3><p>源码：<br><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/e26327c7a8252fbb2df5b1fc39d64cda.png"></p>
+<p>clang 重写之后：<br><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/1c595347ea6f38eb59d8d6801db5a5a0.png"></p>
+<p>可以看到Block的在C语言的实现中是一个struct。struct中记录了Block具体方法实现的imp（即void *FuncPtr）。在调用Block的时候，实际上是调用了这个struct（__block_impl）内存储的函数指针。</p>
+<h3 id="截获基本数据类型的自动变量"><a href="#截获基本数据类型的自动变量" class="headerlink" title="截获基本数据类型的自动变量"></a>截获基本数据类型的自动变量</h3><p>源码:<br><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/9982c40af54e96e97aa13b0b29efdfdc.png"></p>
+<p>clang 重写之后：<br><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/b317fc859fa2d1b0afc1477a73cc7f39.png"></p>
+<p>如果在Block内截获了外部的基本数据类型，那么这个基本数据类型就会在Block初始化的时候，以当时的“快照”被存储到Block结构体的成员变量内。在调用void *FuncPtr的时候，方法内部使用的数据就是这些被截获的数据。</p>
+<p><strong>为什么不支持C语言数组？？</strong></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//如果支持C语言数组，那么必然会出现如下代码</span></span><br><span class="line"><span class="comment">//但是在C语言规范上，是不允许把一个数组类型的变量赋给另一个数组变量</span></span><br><span class="line"><span class="type">void</span> <span class="title function_">funcA</span><span class="params">(<span class="type">char</span> a[<span class="number">20</span>])</span>&#123;</span><br><span class="line">    <span class="type">char</span> b[<span class="number">20</span>] = a;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/08/21/2020-08-21_db-system-design-imp(Transaction)/" itemprop="url">
-              
-                <span itemprop="name">Transaction Management</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-08-21T00:00:00+08:00"
-              content="2020-08-21" >
-          08-21
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
+<h3 id="截获全局变量-amp-amp-静态全局变量-amp-amp-静态变量"><a href="#截获全局变量-amp-amp-静态全局变量-amp-amp-静态变量" class="headerlink" title="截获全局变量 &amp;&amp; 静态全局变量 &amp;&amp; 静态变量"></a>截获全局变量 &amp;&amp; 静态全局变量 &amp;&amp; 静态变量</h3><p>源码：<br><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/d24f45909549cba411ff8ef19e8dc548.png"></p>
+<p>clang 重写之后：<br><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/0af0536f3686b6366a21ed365e22f437.png"></p>
+<p>全局变量和静态全局变量没有什么区别，重写之后访问这些变量的方式依旧不变。</p>
+<p>不同的是静态变量，静态变量在Block内会被截获这个静态变量的地址。如果是普通变量，在作用域结束的时候就会随着函数的结束，栈的弹出而销毁。但是静态变量是在程序执行前就分配好的数据区，并不会随着函数作用域而释放，所以Block可以通过截获这个变量的地址来访问这个变量。</p>
+<h3 id="截获对象-指针-类型的自动变量"><a href="#截获对象-指针-类型的自动变量" class="headerlink" title="截获对象(指针)类型的自动变量"></a>截获对象(指针)类型的自动变量</h3><p>源码：<br><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/dd51589cfa5279abd032d17d217173d6.png"></p>
+<p>clang 重写之后：<br><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/ae2340f59a762a58e2d0edbfadc9c397.png"></p>
+<p>在Block被copy的时候调用desc0中的__main_block_copy_0持有OC对象</p>
+<p>在Block被release的时候调用desc0中的__main_block_dispose_0释放持有的OC对象</p>
+<h3 id="截获-block修饰的基本数据类型"><a href="#截获-block修饰的基本数据类型" class="headerlink" title="截获__block修饰的基本数据类型"></a>截获__block修饰的基本数据类型</h3><p>源码：<br><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/6215c228093c8e9d52dc2e9568e56fa7.png"></p>
+<p>clang 重写之后：<br><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/29e2701bbf1eb9514c8aa230801bc576.png"></p>
+<p>变量 i 变成了一个结构体对象__Block_byref_val_0，并且block_imp中持有的也是这个结构体指针</p>
+<h3 id="截获-block修饰的指针类型的自动变量"><a href="#截获-block修饰的指针类型的自动变量" class="headerlink" title="截获__block修饰的指针类型的自动变量"></a>截获__block修饰的指针类型的自动变量</h3><p>源码：<br><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/0f6bf9053dada99721d8e83858e6e709.png"></p>
+<p>clang 重写之后：<br><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/63595834f2342745c0191f4babc0ca94.png"></p>
+<p><code>__Block_byref</code> 对象新增Copy函数指针和dispose函数指针</p>
+<p><code>__Block_byref</code> 也是一个对象，所以在BlockCopy的时候会调用<code>__Block_byref</code>的copy，同样释放的时候也会调用dispose</p>
+<p>注:在ARC无效的时候，byref不会调用对象的retain。（可以被用来在MRC下避免循环引用）</p>
+<h2 id="QA"><a href="#QA" class="headerlink" title="QA."></a>QA.</h2><h3 id="block变量超出变量作用域存在的理由？"><a href="#block变量超出变量作用域存在的理由？" class="headerlink" title="__block变量超出变量作用域存在的理由？"></a>__block变量超出变量作用域存在的理由？</h3><p>根据上面带<code>__block</code>变量基本类型变量和指针类型变量的描述，可以解释这个问题</p>
+<h3 id="forwarding存在的理由？"><a href="#forwarding存在的理由？" class="headerlink" title="forwarding存在的理由？"></a>forwarding存在的理由？</h3><p>这张图来自于（Objective-C高级编程 iOS与OS X多线程和内存管理）<br><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/053f17c28960744f29a443720914d877.png"></p>
+<p>栈上的__block变量的结构体实例，在__block变量从栈上复制到堆上的时候（<code>__Block_byref_id_object_copy_131</code>参数中一个是堆上的，一个是栈上的），会将成员变量<code>__forwarding</code>的值替换为堆上的值。</p>
+<p><strong>当Block被Copy的时候就会Copy <code>__Block_byref</code>,并且改变原有 __forwarding 指针</strong></p>
+<h3 id="Block的存储域？"><a href="#Block的存储域？" class="headerlink" title="Block的存储域？"></a>Block的存储域？</h3><ol>
+<li>在 ARC 环境下，只要给一个自动变量赋值一个堆栈<code>__NSStackBlock__</code>上block，那么就会调用block的copy</li>
+<li>如果Block不截获任何变量那么生成<code>__NSGlobalBlock__</code> 存储在数据区</li>
+<li>GCD的参数block和Cocoa框架中的UsingBlock传入的参数会被copy</li>
+<li><code>__NSStackBlock__</code>会被copy到<code>__NSMallocBlock__</code></li>
+<li><code>__NSMallocBlock__</code>copy会增加引用计数</li>
+<li><code>__NSGlobalBlock__</code>copy没有任何影响</li>
+</ol>
+<h3 id="为什么说Block是Objc对象？"><a href="#为什么说Block是Objc对象？" class="headerlink" title="为什么说Block是Objc对象？"></a>为什么说Block是Objc对象？</h3><ol>
+<li>block 的结构体可以直接转换为oc对象 objc_object的结构体。objc_object中的isa指向的是class，同样的Block也是指向 <code>__NSMallocBlock__</code>、<code>__NSMallocBlock__</code>、<code>__NSMallocBlock__</code>class，这是三个class在runtime初始化的时候会被注册到class表中。</li>
+<li>block 和 object在同样的内存管理机制下进行创建和释放。</li>
+</ol>
 
       
-
-        
-        
-        
-
-        
-        
-
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/08/17/2020-08-17_db-system-design-imp(Pager)/" itemprop="url">
-              
-                <span itemprop="name">The Pager Module</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-08-17T00:00:00+08:00"
-              content="2020-08-17" >
-          08-17
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
-
-      
-
-        
-        
-        
-
-        
-        
-
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/07/21/20.SQLite-Tokenize/" itemprop="url">
-              
-                <span itemprop="name">SQLite--Tokenize(词法分析器)</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-07-21T00:00:00+08:00"
-              content="2020-07-21" >
-          07-21
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
-
-      
-
-        
-        
-        
-
-        
-        
-
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/07/16/19.SQLite-KeywordHash/" itemprop="url">
-              
-                <span itemprop="name">SQLite--KeywordHash</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-07-16T00:00:00+08:00"
-              content="2020-07-16" >
-          07-16
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
-
-      
-
-        
-        
-        
-
-        
-        
-
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/06/29/18.db-system-design-imp(VM)/" itemprop="url">
-              
-                <span itemprop="name">The Virtual Machine Module</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-06-29T00:00:00+08:00"
-              content="2020-06-29" >
-          06-29
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
-
-      
-
-        
-        
-        
-
-        
-        
-
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/06/12/17.inside-sqlite-chapter-6/" itemprop="url">
-              
-                <span itemprop="name">SQLite引擎</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-06-12T00:00:00+08:00"
-              content="2020-06-12" >
-          06-12
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
-
-      
-
-        
-        
-        
-
-        
-        
-
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/04/19/15.Sqlite-OS/" itemprop="url">
-              
-                <span itemprop="name">SQLite--OS</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-04-19T00:00:00+08:00"
-              content="2020-04-19" >
-          04-19
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
-
-      
-
-        
-        
-        
-
-        
-        
-
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/04/01/14.gomobile-bind/" itemprop="url">
-              
-                <span itemprop="name">解析GoMobile生成的"胶水代码"</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-04-01T00:00:00+08:00"
-              content="2020-04-01" >
-          04-01
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
-
-      
-
     </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/object-c/" rel="tag"># object-c</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/12/21/6.leetcode32/" rel="next" title="最长有效括号 -- LeetCode[32]">
+                <i class="fa fa-chevron-left"></i> 最长有效括号 -- LeetCode[32]
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/01/05/7.leetcode46/" rel="prev" title="全排列 -- LeetCode[46]">
+                全排列 -- LeetCode[46] <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
   </div>
   
   
   
-
-  
-  <nav class="pagination">
-    <span class="page-number current">1</span><a class="page-number" href="/archives/page/2/">2</a><a class="page-number" href="/archives/page/3/">3</a><a class="extend next" rel="next" href="/archives/page/2/"><i class="fa fa-angle-right" aria-label="Next page"></i></a>
-  </nav>
+  </article>
 
 
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
 
 
           </div>
           
+
+  
+
+
 
         </div>
         
@@ -742,8 +569,17 @@
       
 
       
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
 
-      <section class="site-overview-wrap sidebar-panel sidebar-panel-active">
+      <section class="site-overview-wrap sidebar-panel">
         <div class="site-overview">
           <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
             
@@ -870,6 +706,22 @@
         </div>
       </section>
 
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Block%E6%98%AF%E4%BB%80%E4%B9%88%EF%BC%9F"><span class="nav-number">1.</span> <span class="nav-text">Block是什么？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AF%B4%E6%98%8E"><span class="nav-number">2.</span> <span class="nav-text">说明</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E9%AA%8C-amp-%E5%AE%9E%E7%8E%B0"><span class="nav-number">3.</span> <span class="nav-text">实验&amp;实现</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%B2%A1%E6%9C%89%E4%BB%BB%E4%BD%95%E6%88%AA%E8%8E%B7"><span class="nav-number">3.1.</span> <span class="nav-text">没有任何截获</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%88%AA%E8%8E%B7%E5%9F%BA%E6%9C%AC%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B%E7%9A%84%E8%87%AA%E5%8A%A8%E5%8F%98%E9%87%8F"><span class="nav-number">3.2.</span> <span class="nav-text">截获基本数据类型的自动变量</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%88%AA%E8%8E%B7%E5%85%A8%E5%B1%80%E5%8F%98%E9%87%8F-amp-amp-%E9%9D%99%E6%80%81%E5%85%A8%E5%B1%80%E5%8F%98%E9%87%8F-amp-amp-%E9%9D%99%E6%80%81%E5%8F%98%E9%87%8F"><span class="nav-number">3.3.</span> <span class="nav-text">截获全局变量 &amp;&amp; 静态全局变量 &amp;&amp; 静态变量</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%88%AA%E8%8E%B7%E5%AF%B9%E8%B1%A1-%E6%8C%87%E9%92%88-%E7%B1%BB%E5%9E%8B%E7%9A%84%E8%87%AA%E5%8A%A8%E5%8F%98%E9%87%8F"><span class="nav-number">3.4.</span> <span class="nav-text">截获对象(指针)类型的自动变量</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%88%AA%E8%8E%B7-block%E4%BF%AE%E9%A5%B0%E7%9A%84%E5%9F%BA%E6%9C%AC%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B"><span class="nav-number">3.5.</span> <span class="nav-text">截获__block修饰的基本数据类型</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%88%AA%E8%8E%B7-block%E4%BF%AE%E9%A5%B0%E7%9A%84%E6%8C%87%E9%92%88%E7%B1%BB%E5%9E%8B%E7%9A%84%E8%87%AA%E5%8A%A8%E5%8F%98%E9%87%8F"><span class="nav-number">3.6.</span> <span class="nav-text">截获__block修饰的指针类型的自动变量</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#QA"><span class="nav-number">4.</span> <span class="nav-text">QA.</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#block%E5%8F%98%E9%87%8F%E8%B6%85%E5%87%BA%E5%8F%98%E9%87%8F%E4%BD%9C%E7%94%A8%E5%9F%9F%E5%AD%98%E5%9C%A8%E7%9A%84%E7%90%86%E7%94%B1%EF%BC%9F"><span class="nav-number">4.1.</span> <span class="nav-text">__block变量超出变量作用域存在的理由？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#forwarding%E5%AD%98%E5%9C%A8%E7%9A%84%E7%90%86%E7%94%B1%EF%BC%9F"><span class="nav-number">4.2.</span> <span class="nav-text">forwarding存在的理由？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Block%E7%9A%84%E5%AD%98%E5%82%A8%E5%9F%9F%EF%BC%9F"><span class="nav-number">4.3.</span> <span class="nav-text">Block的存储域？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E8%AF%B4Block%E6%98%AFObjc%E5%AF%B9%E8%B1%A1%EF%BC%9F"><span class="nav-number">4.4.</span> <span class="nav-text">为什么说Block是Objc对象？</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
       
 
       
@@ -1013,6 +865,10 @@
 
 
   
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=6.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=6.1.0"></script>
+
+
 
   
 

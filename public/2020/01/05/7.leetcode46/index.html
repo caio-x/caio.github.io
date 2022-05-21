@@ -106,14 +106,18 @@
 
 
 
-  <meta name="description" content="Spade-Ace&amp;apos; Tech Blog">
-<meta property="og:type" content="website">
-<meta property="og:title" content="Spade-Ace">
-<meta property="og:url" content="https://blog.spade-ace.tech/archives/index.html">
+  <meta name="description" content="【Medium】给定一个没有重复数字的序列，返回其所有可能的全排列。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="全排列 -- LeetCode[46]">
+<meta property="og:url" content="https://blog.spade-ace.tech/2020/01/05/7.leetcode46/index.html">
 <meta property="og:site_name" content="Spade-Ace">
-<meta property="og:description" content="Spade-Ace&amp;apos; Tech Blog">
+<meta property="og:description" content="【Medium】给定一个没有重复数字的序列，返回其所有可能的全排列。">
 <meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2020-01-04T16:00:00.000Z">
+<meta property="article:modified_time" content="2020-08-29T14:42:58.502Z">
 <meta property="article:author" content="Caio">
+<meta property="article:tag" content="leetcode">
+<meta property="article:tag" content="回溯法">
 <meta name="twitter:card" content="summary">
 
 
@@ -121,7 +125,7 @@
 
 
 
-  <link rel="canonical" href="https://blog.spade-ace.tech/archives/"/>
+  <link rel="canonical" href="https://blog.spade-ace.tech/2020/01/05/7.leetcode46/"/>
 
 
 
@@ -131,7 +135,7 @@
   };
 </script>
 
-  <title>Archive | Spade-Ace</title>
+  <title>全排列 -- LeetCode[46] | Spade-Ace</title>
   
 
 
@@ -178,7 +182,7 @@
     
   
 
-  <div class="container sidebar-position-left page-archive">
+  <div class="container sidebar-position-left page-post-detail">
     <div class="headband"></div>
 
     <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
@@ -303,425 +307,225 @@
           
             
 
-    
-    
-      
-      
-    
-      
-      
-    
-    
-
-  
-
-
           
           <div id="content" class="content">
             
 
+  <div id="posts" class="posts-expand">
+    
+
+  
+
   
   
   
-  <div class="post-block archive">
-    <div id="posts" class="posts-collapse">
-      <span class="archive-move-on"></span>
 
-      
+  
+    <div class="reading-progress-bar"></div>
+  
 
-      
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2020/01/05/7.leetcode46/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/timg.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Spade-Ace">
+    </span>
+
+    
+      <header class="post-header">
 
         
         
+          <h1 class="post-title" itemprop="name headline">全排列 -- LeetCode[46]</h1>
         
 
-        
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-01-05T00:00:00+08:00">2020-01-05</time>
+            
+
+            
+            
+
+            
+          </span>
+
           
-          <div class="collection-title">
-            <h1 class="archive-year" id="archive-year-2020">2020</h1>
-          </div>
-        
-        
-
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/08/29/2020-08-29_db_system_design_imp(WAL)/" itemprop="url">
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
               
-                <span itemprop="name">WAL Mode</span>
+                <span class="post-meta-item-text">In</span>
               
-            </a>
-        
-      </h2>
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/%E7%AE%97%E6%B3%95/" itemprop="url" rel="index"><span itemprop="name">算法</span></a></span>
 
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-08-29T00:00:00+08:00"
-              content="2020-08-29" >
-          08-29
-        </time>
-      </div>
+                
+                
+              
+            </span>
+          
 
-    </header>
-  </article>
+          
+            
+          
 
+          
+          
 
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
 
       
-
-        
-        
-        
-
-        
-        
-
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/08/25/2020-08-25_db-system-design-im(storage)/" itemprop="url">
-              
-                <span itemprop="name">Storage</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-08-25T00:00:00+08:00"
-              content="2020-08-25" >
-          08-25
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
-
       
 
-        
-        
-        
+      
+        <blockquote>
+<p>【Medium】给定一个没有重复数字的序列，返回其所有可能的全排列。</p>
+</blockquote>
+<span id="more"></span>
 
-        
-        
+<p>举例:<br>输入: [1,2,3]<br>输出:<br>[<br>  [1,2,3],<br>  [1,3,2],<br>  [2,1,3],<br>  [2,3,1],<br>  [3,1,2],<br>  [3,2,1]<br>]</p>
+<p><strong>回溯法</strong><br>关于回溯法的其他题型，看<a target="_blank" rel="noopener" href="https://caio.ink/tag/arg-backtrack/">这里</a></p>
+<p>回溯法的算法原型是：<br>通过探索所有可能的候选解来找出所有的解。如果候选解被确认 不是 一个解的话（或者至少不是 最后一个 解），回溯算法会通过在上一步进行一些变化抛弃该解，即 <strong>回溯</strong> 并且再次尝试。</p>
+<p>其实回溯算法关键在于:<br>不合适就退回上一步<br>然后通过约束条件, 减少时间复杂度。</p>
+<h3 id="题解一"><a href="#题解一" class="headerlink" title="题解一"></a>题解一</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Solution46</span> &#123;</span><br><span class="line">  <span class="keyword">public</span> List&lt;List&lt;Integer&gt;&gt; <span class="title function_">permute</span><span class="params">(<span class="type">int</span>[] nums)</span> &#123;</span><br><span class="line"></span><br><span class="line">    List&lt;List&lt;Integer&gt;&gt; res = <span class="keyword">new</span> <span class="title class_">ArrayList</span>&lt;&gt;();</span><br><span class="line">    <span class="type">int</span>[] visited = <span class="keyword">new</span> <span class="title class_">int</span>[nums.length];<span class="comment">//用来标识，当前递归链中，某个索引下的值是否被使用过了。</span></span><br><span class="line">    backtrack(res, nums, <span class="keyword">new</span> <span class="title class_">ArrayList</span>&lt;Integer&gt;(), visited);</span><br><span class="line">    <span class="keyword">return</span> res;</span><br><span class="line"></span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">void</span> <span class="title function_">backtrack</span><span class="params">(List&lt;List&lt;Integer&gt;&gt; res, <span class="type">int</span>[] nums, ArrayList&lt;Integer&gt; tmp, <span class="type">int</span>[] visited)</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (tmp.size() == nums.length) &#123;</span><br><span class="line">      res.add(<span class="keyword">new</span> <span class="title class_">ArrayList</span>&lt;&gt;(tmp));</span><br><span class="line">      <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">0</span>; i &lt; nums.length; i++) &#123;</span><br><span class="line">      <span class="keyword">if</span> (visited[i] == <span class="number">1</span>)<span class="comment">//如果这个值被使用过了，那么就继续用下一个</span></span><br><span class="line">        <span class="keyword">continue</span>;</span><br><span class="line">      tmp.add(nums[i]);<span class="comment">//加入链表</span></span><br><span class="line">      visited[i] = <span class="number">1</span>;<span class="comment">//标记这个值被使用过了</span></span><br><span class="line"></span><br><span class="line">      backtrack(res, nums, tmp, visited);</span><br><span class="line">      <span class="comment">//回溯</span></span><br><span class="line">      visited[i] = <span class="number">0</span>;</span><br><span class="line">      tmp.remove(tmp.size() - <span class="number">1</span>);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
-        
+<p>这个解法是我看到的第二个解法（因为第一个解法，也就是下面的解法，第一次没看懂[哭]）。这个解法其实一眼就看出来了。</p>
+<p>和概率论中的摸球题思想有点类似。</p>
+<p>N个Value，先固定第一个，N个值里去找第二个。<br>怎么去找N个Value里的那个第二个值，而不和第一个重复呢？题解里，用一个visited来标识这个值是否已经被用过。<br>找到一个解之后，就通过回溯的方式，再去寻找下一个解。</p>
+<p>这就是回溯的基本思想。</p>
+<p>看完上一个题解之后，其实发现，在N个value中找第二个值的方式似乎可以优化。<br>于是有了下面这个题解。</p>
+<h3 id="题解二"><a href="#题解二" class="headerlink" title="题解二"></a>题解二</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Solution</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">backtrack</span><span class="params">(<span class="type">int</span> n, ArrayList&lt;Integer&gt; nums, List&lt;List&lt;Integer&gt;&gt; output, <span class="type">int</span> first)</span> &#123;</span><br><span class="line">        <span class="comment">// if all integers are used up</span></span><br><span class="line">        <span class="keyword">if</span> (first == n)</span><br><span class="line">            output.add(<span class="keyword">new</span> <span class="title class_">ArrayList</span>&lt;Integer&gt;(nums));</span><br><span class="line"></span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> first; i &lt; n; i++) &#123;</span><br><span class="line">            <span class="comment">// place i-th integer first</span></span><br><span class="line">            <span class="comment">// in the current permutation</span></span><br><span class="line">            Collections.swap(nums, first, i);</span><br><span class="line">            <span class="comment">// use next integers to complete the permutations</span></span><br><span class="line">            backtrack(n, nums, output, first + <span class="number">1</span>);</span><br><span class="line">            <span class="comment">// backtrack</span></span><br><span class="line">            Collections.swap(nums, first, i);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> List&lt;List&lt;Integer&gt;&gt; <span class="title function_">permute</span><span class="params">(<span class="type">int</span>[] nums)</span> &#123;</span><br><span class="line">        <span class="comment">// init output list</span></span><br><span class="line">        List&lt;List&lt;Integer&gt;&gt; output = <span class="keyword">new</span> <span class="title class_">LinkedList</span>&lt;List&lt;Integer&gt;&gt;();</span><br><span class="line"></span><br><span class="line">        <span class="comment">// convert nums into list since the output is a list of lists</span></span><br><span class="line">        ArrayList&lt;Integer&gt; nums_lst = <span class="keyword">new</span> <span class="title class_">ArrayList</span>&lt;Integer&gt;();</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> num : nums)</span><br><span class="line">            nums_lst.add(num);</span><br><span class="line"></span><br><span class="line">        <span class="type">int</span> <span class="variable">n</span> <span class="operator">=</span> nums.length;</span><br><span class="line">        backtrack(n, nums_lst, output, <span class="number">0</span>);</span><br><span class="line">        <span class="keyword">return</span> output;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/08/21/2020-08-21_db-system-design-imp(Transaction)/" itemprop="url">
-              
-                <span itemprop="name">Transaction Management</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-08-21T00:00:00+08:00"
-              content="2020-08-21" >
-          08-21
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
+<p>这是这道题 LeetCode的官方题解。</p>
+<p>题解一中的tmp链表，其实是用来探索并且存储一个解。但是这个解其实可以直接存储在原始链表内，通过swap，交换元素位置，来得到一个解。而回溯的时候，只需逆向的swap即可。</p>
+<p>举个例子，加入有N个value，记作 Arr[N]，算法流程：</p>
+<ol>
+<li>固定第一个value，一共有N种可能性。所以遍历索引i&lt;N，并且把Arr[i]与第一个交换。那么剩下来的事情，就变成：把剩余N-1个值排列出所有的可能性。</li>
+<li>不断的递归 第1步 ，只不过每次固定的是剩余的Value中的第一个值，一直到最后一个值。这个时候，Arr中的就是其中的一个解了。</li>
+<li>接下来就是回溯，回溯的方法就是反向swap。每次循环都是一个回溯。</li>
+</ol>
+<h3 id="算法复杂度："><a href="#算法复杂度：" class="headerlink" title="算法复杂度："></a>算法复杂度：</h3><p>第一个递归是N次循环，第二个递归是N-1次，第三个是N-2次…<br>时间复杂度应该是：O(n!)题解一的时间复杂度为O(n^n)<br>空间复杂度应该是：O(1) 题解一的空间复杂度是O(n)</p>
+<p>与此题型类似的有:</p>
+<ol>
+<li><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/combination-sum">39组合总和</a></li>
+<li><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/combination-sum-ii">40组合总和II</a></li>
+<li><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/permutations">46全排列</a>–看<a target="_blank" rel="noopener" href="https://caio.ink/leetcode46/">站内文章</a></li>
+<li><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/permutations-ii">47全排列II</a>–看<a target="_blank" rel="noopener" href="https://caio.ink/leetcode47/">站内文章</a></li>
+<li><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/combinations">77组合</a></li>
+<li><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/subsets">78子集</a></li>
+<li><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/subsets-ii">90子集II</a></li>
+</ol>
 
       
-
-        
-        
-        
-
-        
-        
-
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/08/17/2020-08-17_db-system-design-imp(Pager)/" itemprop="url">
-              
-                <span itemprop="name">The Pager Module</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-08-17T00:00:00+08:00"
-              content="2020-08-17" >
-          08-17
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
-
-      
-
-        
-        
-        
-
-        
-        
-
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/07/21/20.SQLite-Tokenize/" itemprop="url">
-              
-                <span itemprop="name">SQLite--Tokenize(词法分析器)</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-07-21T00:00:00+08:00"
-              content="2020-07-21" >
-          07-21
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
-
-      
-
-        
-        
-        
-
-        
-        
-
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/07/16/19.SQLite-KeywordHash/" itemprop="url">
-              
-                <span itemprop="name">SQLite--KeywordHash</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-07-16T00:00:00+08:00"
-              content="2020-07-16" >
-          07-16
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
-
-      
-
-        
-        
-        
-
-        
-        
-
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/06/29/18.db-system-design-imp(VM)/" itemprop="url">
-              
-                <span itemprop="name">The Virtual Machine Module</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-06-29T00:00:00+08:00"
-              content="2020-06-29" >
-          06-29
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
-
-      
-
-        
-        
-        
-
-        
-        
-
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/06/12/17.inside-sqlite-chapter-6/" itemprop="url">
-              
-                <span itemprop="name">SQLite引擎</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-06-12T00:00:00+08:00"
-              content="2020-06-12" >
-          06-12
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
-
-      
-
-        
-        
-        
-
-        
-        
-
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/04/19/15.Sqlite-OS/" itemprop="url">
-              
-                <span itemprop="name">SQLite--OS</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-04-19T00:00:00+08:00"
-              content="2020-04-19" >
-          04-19
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
-
-      
-
-        
-        
-        
-
-        
-        
-
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/04/01/14.gomobile-bind/" itemprop="url">
-              
-                <span itemprop="name">解析GoMobile生成的"胶水代码"</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-04-01T00:00:00+08:00"
-              content="2020-04-01" >
-          04-01
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
-
-      
-
     </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/leetcode/" rel="tag"># leetcode</a>
+          
+            <a href="/tags/%E5%9B%9E%E6%BA%AF%E6%B3%95/" rel="tag"># 回溯法</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/12/21/5.OC-Block-imp/" rel="next" title="老生常谈，oc block的实现">
+                <i class="fa fa-chevron-left"></i> 老生常谈，oc block的实现
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/01/07/8.leetcode47/" rel="prev" title="全排列II -- LeetCode[37]">
+                全排列II -- LeetCode[37] <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
   </div>
   
   
   
-
-  
-  <nav class="pagination">
-    <span class="page-number current">1</span><a class="page-number" href="/archives/page/2/">2</a><a class="page-number" href="/archives/page/3/">3</a><a class="extend next" rel="next" href="/archives/page/2/"><i class="fa fa-angle-right" aria-label="Next page"></i></a>
-  </nav>
+  </article>
 
 
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
 
 
           </div>
           
+
+  
+
+
 
         </div>
         
@@ -742,8 +546,17 @@
       
 
       
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
 
-      <section class="site-overview-wrap sidebar-panel sidebar-panel-active">
+      <section class="site-overview-wrap sidebar-panel">
         <div class="site-overview">
           <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
             
@@ -870,6 +683,22 @@
         </div>
       </section>
 
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%A2%98%E8%A7%A3%E4%B8%80"><span class="nav-number">1.</span> <span class="nav-text">题解一</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%A2%98%E8%A7%A3%E4%BA%8C"><span class="nav-number">2.</span> <span class="nav-text">题解二</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%AE%97%E6%B3%95%E5%A4%8D%E6%9D%82%E5%BA%A6%EF%BC%9A"><span class="nav-number">3.</span> <span class="nav-text">算法复杂度：</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
       
 
       
@@ -1013,6 +842,10 @@
 
 
   
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=6.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=6.1.0"></script>
+
+
 
   
 

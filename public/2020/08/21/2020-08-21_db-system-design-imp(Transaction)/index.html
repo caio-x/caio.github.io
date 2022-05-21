@@ -106,14 +106,17 @@
 
 
 
-  <meta name="description" content="Spade-Ace&amp;apos; Tech Blog">
-<meta property="og:type" content="website">
-<meta property="og:title" content="Spade-Ace">
-<meta property="og:url" content="https://blog.spade-ace.tech/archives/index.html">
+  <meta name="description" content="数据库管理系统的主要任务就是帮助用户在数据库上操作和存储数据。另外，DBMS还需要在用户的并发调用下保护数据库，以及在应用的崩溃，系统崩溃，系统掉电的情况下保持数据库的一致性。出于这些目的，DBMS在一个抽象的事务中执行所有的数据库操作。对于保持数据库的一致性来说，事务管理非常关键。SQLite依赖原生的文件锁，并且实现了页面日志来实现ACID。SQLite只支持一级事务，也就是说不支持事务嵌套">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Transaction Management">
+<meta property="og:url" content="https://blog.spade-ace.tech/2020/08/21/2020-08-21_db-system-design-imp(Transaction)/index.html">
 <meta property="og:site_name" content="Spade-Ace">
-<meta property="og:description" content="Spade-Ace&amp;apos; Tech Blog">
+<meta property="og:description" content="数据库管理系统的主要任务就是帮助用户在数据库上操作和存储数据。另外，DBMS还需要在用户的并发调用下保护数据库，以及在应用的崩溃，系统崩溃，系统掉电的情况下保持数据库的一致性。出于这些目的，DBMS在一个抽象的事务中执行所有的数据库操作。对于保持数据库的一致性来说，事务管理非常关键。SQLite依赖原生的文件锁，并且实现了页面日志来实现ACID。SQLite只支持一级事务，也就是说不支持事务嵌套">
 <meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2020-08-20T16:00:00.000Z">
+<meta property="article:modified_time" content="2020-08-31T07:21:34.085Z">
 <meta property="article:author" content="Caio">
+<meta property="article:tag" content="sqlite3">
 <meta name="twitter:card" content="summary">
 
 
@@ -121,7 +124,7 @@
 
 
 
-  <link rel="canonical" href="https://blog.spade-ace.tech/archives/"/>
+  <link rel="canonical" href="https://blog.spade-ace.tech/2020/08/21/2020-08-21_db-system-design-imp(Transaction)/"/>
 
 
 
@@ -131,7 +134,7 @@
   };
 </script>
 
-  <title>Archive | Spade-Ace</title>
+  <title>Transaction Management | Spade-Ace</title>
   
 
 
@@ -178,7 +181,7 @@
     
   
 
-  <div class="container sidebar-position-left page-archive">
+  <div class="container sidebar-position-left page-post-detail">
     <div class="headband"></div>
 
     <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
@@ -303,425 +306,246 @@
           
             
 
-    
-    
-      
-      
-    
-      
-      
-    
-    
-
-  
-
-
           
           <div id="content" class="content">
             
 
+  <div id="posts" class="posts-expand">
+    
+
+  
+
   
   
   
-  <div class="post-block archive">
-    <div id="posts" class="posts-collapse">
-      <span class="archive-move-on"></span>
 
-      
+  
+    <div class="reading-progress-bar"></div>
+  
 
-      
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2020/08/21/2020-08-21_db-system-design-imp(Transaction)/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/timg.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Spade-Ace">
+    </span>
+
+    
+      <header class="post-header">
 
         
         
+          <h1 class="post-title" itemprop="name headline">Transaction Management</h1>
         
 
-        
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-08-21T00:00:00+08:00">2020-08-21</time>
+            
+
+            
+            
+
+            
+          </span>
+
           
-          <div class="collection-title">
-            <h1 class="archive-year" id="archive-year-2020">2020</h1>
-          </div>
-        
-        
-
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/08/29/2020-08-29_db_system_design_imp(WAL)/" itemprop="url">
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
               
-                <span itemprop="name">WAL Mode</span>
+                <span class="post-meta-item-text">In</span>
               
-            </a>
-        
-      </h2>
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/sqlite3/" itemprop="url" rel="index"><span itemprop="name">sqlite3</span></a></span>
 
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-08-29T00:00:00+08:00"
-              content="2020-08-29" >
-          08-29
-        </time>
-      </div>
+                
+                
+              
+            </span>
+          
 
-    </header>
-  </article>
+          
+            
+          
 
+          
+          
 
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
 
       
-
-        
-        
-        
-
-        
-        
-
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/08/25/2020-08-25_db-system-design-im(storage)/" itemprop="url">
-              
-                <span itemprop="name">Storage</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-08-25T00:00:00+08:00"
-              content="2020-08-25" >
-          08-25
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
-
       
 
-        
-        
-        
+      
+        <blockquote>
+<p>数据库管理系统的主要任务就是帮助用户在数据库上操作和存储数据。另外，DBMS还需要在用户的并发调用下保护数据库，以及在应用的崩溃，系统崩溃，系统掉电的情况下保持数据库的一致性。出于这些目的，DBMS在一个抽象的事务中执行所有的数据库操作。对于保持数据库的一致性来说，事务管理非常关键。SQLite依赖原生的文件锁，并且实现了页面日志来实现ACID。SQLite只支持一级事务，也就是说不支持事务嵌套。本文讨论了SQLite是如何实现了事务的ACID，从而更新单个和多个数据库。<code>Pager</code>那一篇文章会解释SQLite事务管理器pager的内部工作原理。</p>
+</blockquote>
+<span id="more"></span>
 
-        
-        
+<h1 id="事务类型"><a href="#事务类型" class="headerlink" title="事务类型"></a>事务类型</h1><p>几乎所有的DBMS使用锁机制来处理并发控制，并使用日志来保存恢复信息。在一个事务修改数据库项之前，一个DBMS就会将一条包含恢复信息(例如，更新的新旧数据)的日志记录写入日志文件。在DBMS修改数据库文件之前，DBMS需要确保日志记录已经完全存储在磁盘内了。在事务事件终止或者失败的时候，DBMS就会在日志文件中获取足够的信息，来回滚数据库到一个可接受的具有一致性的状态，并且不影响其他的事务。在恢复数据库的时候，DBMS就会撤销数据库中终止的事务带来的影响，并且重做数据库上已经提交的数据。在SQLite里，锁和日志的活动依赖事务的类型，本小节就会讨论这个。</p>
+<h2 id="系统事务"><a href="#系统事务" class="headerlink" title="系统事务"></a>系统事务</h2><p>SQLite每一个SQL语句的执行都会在事务内。它同时支持读事务和写事务。(在SQLite文档中，事务这个词本身就有点抽象。一个事务可能是一个读事务，也能是一个写事务。如果需要的话，后文均会特别指出。)应用要想读取数据库的任何数据，必须要在一个读或者写事务内，要想写数据，必须要在一个写事务内。应用无需特别指出要求SQLite将每一个SQL语句单独置于一个事务内，SQLite会自动这样处理；这是默认行为，系统默认就会在一个自动提交模式。这些事务称之为系统事务或者自动提交事务或者隐式事务。对于一个SELECT语句，SQLite会创建一个读事务来执行语句。对于非SELECT语句，SQLite会先创建一个读事务，然后将它转换为写事务。每一个读写事务都会在事务结束的时候自动提交。应用层并不知道系统事务。他们只需要向SQLite提交语句，剩下的事情就由SQLite完成。</p>
+<p>一个应用可以在同一个数据库连接上启动SELECT读事务的并发执行，但是在一个数据库连接上只能执行一个非SELECT的写事务。这意味着在数据库连接上，不能有两个并发的写事务，但可以有一个并发的写事务和多个读事务。</p>
+<p>非select语句的执行是原子的，SQLite当它执行一个非select语句的时候，会获取一个锁，并且在语句执行完成的时候会释放这个锁。另一方面，一个select语句不是原子的；它会在语句开始的时候获取一个锁，但是会在结果的每一行都会暂停和释放锁。所以一个select语句的执行，可以运行到它结果的第一行，这时候其它select语句可以运行，以此类推。因此在select语句的各个执行阶段可以有很多个其他select语句。在暂停的过程中，甚至可以执行一个非select语句。稍后会解释，读事务和写事务不能同时操作同一张表。因此，读取事务与并发写入事务是隔离的。</p>
+<h2 id="用户事务"><a href="#用户事务" class="headerlink" title="用户事务"></a>用户事务</h2><p>对于一些应用，尤其是那些写入敏感的来说，自动提交模式的代价可能比较昂贵，因为数据库可能会为每一个非select语句，频繁的打开，写入，和关闭日志文件。另外，在每一个SQL语句执行的时候，还会有一些并发控制的代价，因为应用需要在数据库文件上请求和释放文件锁。这些代价会给一些性能向的应用(尤其是大型应用)带来性能问题，只能通过将一个用户级的事务包含一些SQL语句来减少因此带来的性能影响。应用可以在<code>BEGIN TRANSACTION</code>和(<code>COMMIT TRANACTION</code>或<code>ROLLBACKTRANACTION</code>)这两个命令之间包含一系列的SQL语句。一个<code>begin-commit</code>或<code>begin-rolback</code>语句可以包含任意数量的select或者非select语句。</p>
+<p>应用可以在一个数据库连接上通过显式执行<code>BEGIN</code>命令来手动开启一个事务。而这个事务就被称之为用户级事务或者显式事务或者简单的说用户事务。当这一类事务开启的时候，SQLite就会离开默认自动提交模式，在每一个SQL语句执行过程期，它都不会调用提交或者终止。一个执行成功的非select语句是这个用户事务的一部分，但是select语句将会被看做一个独立的读事务。你可以把用户事务看做全都是的写事务。当应用执行<code>COMMIT</code>或者<code>ROLLBACK</code>的时候，SQLite就会提交或者回滚事务。用户事务提交时，写事务已经提交，但是所有的读事务依旧保持激活。但是如果用户事务终止的时候，写事务会回滚，并且一些读取已经被修改的表的读事务也会被终止。SQLite会在写事务完成之后将模式切换为自动提交模式。读事务在对应的读语句执行完成的时候就会被单独提交。</p>
+<p>SQLite只支持一级事务，即不支持在事务开始之后，再开启一个事务。也不支持在一个数据库连接上同时开启两个事务。</p>
+<h2 id="保存点"><a href="#保存点" class="headerlink" title="保存点"></a>保存点</h2><p>SQLite支持在用户事务中开启保存点。应用在事务内外均可以执行保存点的命令。对于在事务外开启保存点的情况，SQLite会首先打开一个用户事务，然后执行保存点命令，当应用释放保存点的时候，提交事务。所谓保存点就是事务执行过程中应用建立的一个点。建立了一个应用认为在此时的数据库状态是OK的一个点。一个事务中可以有很多个保存点。之后，它可以回滚到保存点中的任意一个，然后重新建立保存点时的数据库状态。</p>
+<h2 id="语句子事务"><a href="#语句子事务" class="headerlink" title="语句子事务"></a>语句子事务</h2><p>一个用户事务不仅仅是一个平坦的一级事务。所有执行成功的非select语句都在这个事务中。其中的每一个语句都会在一个单独的语句级的子事务中。在任何时候，在用户事务中最多只有一个子事务。事实上SQLite是使用隐式匿名的保存点来执行子事务，在这个子事务结束的时候释放保存点。这个过程也就会一直持续到事务完成，即执行COMMIT或者ABORT命令。如果当前的子语句执行失败了，SQLite不会立刻终止整个事务，除非事务的冲突解决是调用回滚(看本节后文)。而是将数据库恢复到语句执行开始之前的状态（通过还原匿名保存点）;用户事务也就从那个保存点开始继续执行。失败的语句不会更改其他先前执行的SQL语句或新语句的结果，除非主用户事务中止自身。下面看一个简单的SQLite事务例子:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">BEGIN TRANSACTION;</span><br><span class="line">    INSERT INTO table1 VALUES(100);</span><br><span class="line">    INSERT INTO table2 VALUES(20,100);</span><br><span class="line">    UPDATE table1 SET x=x+1 WHERE y &gt; 10;</span><br><span class="line">    INSERT INTO table3 VALUES(1,2,3);</span><br><span class="line">COMMIT TRANSACTION;</span><br></pre></td></tr></table></figure>
 
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/08/21/2020-08-21_db-system-design-imp(Transaction)/" itemprop="url">
-              
-                <span itemprop="name">Transaction Management</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-08-21T00:00:00+08:00"
-              content="2020-08-21" >
-          08-21
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
+<p>假设数据库有三个表分别是table1，table2和table3。应用会通过执行一个<code>begin transaction</code>来打开一个事务。上面的四个语句都会在一个单独的子事务中执行，按照书写的顺序，一个接一个执行。举个例子，如果在中间的UPDATE语句执行的时候，发生了一个约束错误，那么这个更新语句所带来的行更新都会恢复，但是其他的三个INSERT语句的变更就会在应用执行<code>COMMIT TRANSACTIOIN</code>语句的时候被提交到数据库。</p>
+<p><strong>冲突解决</strong>:当执行insert或者update违反约束的时候，一个语句有5种方法来解决冲突。<code>Rollback</code>:终止整个事务。<code>Abort</code>:停止并取消当前语句子事务的发生的变更；整个事务仍然有效。这是默认解决方法。<code>Fail</code>:接受当前语句子事务发生的变更，但是不再继续当前的语句；整个事务仍然有效。<code>Ignore</code>:导致约束违反的那些数据行不会发生变更;这个语句子事务仍然有效，并且会继续执行。<code>Replace</code>:导致约束违反的那些数据行都会被移除;这个语句子事务仍然有效，并且会继续执行。</p>
+<!---
+# 锁管理
+//TODO:
+## 锁的类型以及它们的职责
+////TODO:
+## 锁的请求策略
+////TODO:
+## 显式的锁
+////TODO:
+## 死锁和饥饿
+////TODO:
+## Linux锁原语
+////TODO:
+## SQLite锁的实现
+////TODO:
+### SQLite锁与原生文件锁的转换
+//////TODO:
+### 原生锁的工程问题
+//////TODO:
+### Linux系统问题
+//////TODO:
+### 多线程应用
+//////TODO:
+## 锁的API
+////TODO:
+### sqlite3OsLock
+//////TODO:
+### sqlite3OsUnlock
+//////TODO:
+--->
+<h1 id="日志管理"><a href="#日志管理" class="headerlink" title="日志管理"></a>日志管理</h1><p>日志即数据恢复文件，在发生事务或子语句级事务终止，或者系统问题的时候用来恢复数据库数据。SQLite为每一个数据库使用单个的日志文件(对于内存数据库来说，不会使用日志文件)。它仅确保事务的回滚（撤消，而不是重做），并且日志文件通常称为回滚日志。日志文件总是和数据库文件在同一个目录下，并且使用同样的名字，只不过后面跟随‘-journal’。</p>
+<p><strong>临时日志vs持久化日志文件</strong>:SQLite在同一时间同一个数据库文件上只允许最多只有一个写事务。在默认的操作模式下，它会为每一个写事务动态地创建日志文件，以及在事务完成的时候删除文件。当然，可以通过<code>journal mode</code>事件指令来裁剪，或者文件头部无效化，内存化或者关闭日志文件(还有wal模式)。默认的是删除。如果应用使用独占锁模式(<code>pragma locking_mode=exclusive</code>)。SQLite会在独占锁的模式下创建日志文件，并且日志文件会一直持续存在，直到离开这个模式。在这种情况下，在事务过程中，日志文件是会被截断或其标头为零。内存化的选项就是使数据库的日志文件完全存放在内存中，关闭的话就是不使用日志文件。</p>
+<p>当前写事务导致的更新操作会在日志文件中产生一条日志记录。当事务想要对数据库发生变更的时候，SQLite就会在回滚日志中写入足够的信息，以便为了可以在后续将数据库文件恢复到事务开始的时候。在目前的数据库社区中有很多数据库的日志结构；它们依赖于存在日志记录中的重做&#x2F;撤销信息。SQLite则是使用最简单，尽管不是最高效的方法。它在页面级粒度上使用旧值日志记录技术。(SQLite不会再恢复数据库上使用重做逻辑。总之，它不会在日志文件中存储新的值。)因此，在一个事务首次修改任何一个页面的时候，SQLite都会将页面的原始数据包括页面号作为新的日志记录的一部分，存储在回滚日志中。</p>
+<p>一旦一个页面数据被拷贝进回滚日志的时候，这个页面就不会再次以新日志记录的形势添加进去了，尽管后面可能对这个页面发生了多次的变更。这个页面级撤消日志记录的一个不错的特性是:可以通过将内容从日记文件盲目复制到数据库文件中来还原页面，并且撤消操作是幂等(可重复执行)的。这个撤销操作不会产生任何的补偿日志。SQLite不会在日志文件中存储一个新的页面，因为新页面没有旧数据。相反，日志会在日志头部记录下在日志文件创建时的数据库原始大小。如果数据库文件因为事务被扩展了，文件就会被缩减到之前的原始大小。</p>
+<p><strong>跟踪已经记录的日志页面</strong>:SQLite在内存中使用一个map数据结构来持续跟踪那些在当前事务中已经被日志文件记录的页面。因此内存空间的开销，和发生变更的页面数量成正比。对于小型数据库来说，这些开销可以忽略不计。</p>
+<p><strong>日志优化</strong>:已释放的叶子节点的页面内容被当做可以回收的垃圾。当这个页面被使用的时候，page就不会被记录日志，因为它没有任何有用的信息。</p>
+<p>如果一个事务使用并且修改了多个数据库文件，那么每一个数据库都有它自己的回滚日志文件。他们是独立的回滚日志文件，互相都不知道对方的存在。为了建立相互的关系，SQLite额外维护了一个独立的交叉日志称为主日志文件。这个主日志文件一般都和主数据库文件在同一个目录下。这是一个临时文件。在事务准备提交的时候创建，在提交进程处理完成的时候删除。它不包含任何用来回滚的页面信息，而是包含了在这个事务内相关的所有独立的日志文件名。每一个数据库文件独立的日志文件，同样的包含这个主数据库的名字。如果没有attach的数据库(或者在当前事务中没有涉及attach的数据库的数据修改)，那么就不会创建这个主日志文件，并且各自独立的日志文件也不会包含任何关于主日志文件的信息。后面会讨论日志协议和提交协议。</p>
+<p><strong>不要对数据库文件起别名</strong>:对同一个数据库文件不能使用不同的名字(硬链接或者软连接)。如果不同的应用对同一个数据库使用了不同的名字来访问数据库，那么在同一个数据库下就会产生不同名字的回滚日志文件，那么有可能会导致这些回滚日志被忽略，从而引起数据库的不一致。同样的，也不能修改数据库名而不修改日志文件。但即使这样，这个日志文件也有可能被主日志文件所引用。这样操作会有风险！</p>
+<h2 id="日志记录协议"><a href="#日志记录协议" class="headerlink" title="日志记录协议"></a>日志记录协议</h2><p>SQLite遵循WAL的日志协议来确保数据库的一致性。SQLite实现了，在修改数据库的之前，先把原始的数据库分页写入到日志文件中。在日志文件中写入日志记录是延迟执行的:SQLite不会立刻在文件中刷入日志。在将页面写入到数据库文件之前，才会真正的刷新日志文件。日志刷新就是保证所有的日志记录以及真真正正地都落地到磁盘了。因为在落地前任何的变更都有可能会让数据库存在不一致的风险。</p>
+<h2 id="提交协议"><a href="#提交协议" class="headerlink" title="提交协议"></a>提交协议</h2><p>默认的提交逻辑是，提交时刷新日志和释放时刷新数据库。当一个应用提交事务的时候，SQLite保证所有的日志记录都已经落到磁盘上了。在提交之后，日志文件就会被销毁，事务就完成了。在完成之前，如果发生了系统错误，那么事务提交就是失败，后面就会在数据库首次被读取的时候恢复数据库。然而，在释放回滚日志文件之前，所有的数据库文件变更都会被flush到磁盘上。这样就可以保证在释放日志文件之前，所有的变更也落地了。</p>
+<p><strong>异步事务和懒提交</strong>:默认的事务都是同步事务。SQLite严格遵守上面说道的日志记录协议，和日志提交协议。仅管不推荐，但是SQLite还是允许事务允许在懒提交模式。这些被称之为异步事务。通过设置宏来实现。对于异步事务，SQLite不会再事务提交或者任何时间点，执行日志的flush和数据库的flush。因此，数据库写入和提交都会非常快。但是，会有风险。一旦出现了失败，数据库可能就不会存储一个完整的一致的状态。对于临时数据库来说，默认的事务就是异步模式，因为我们不需要关心临时数据库的数据库恢复。</p>
+<h1 id="子事务管理"><a href="#子事务管理" class="headerlink" title="子事务管理"></a>子事务管理</h1><p>一个语句级的子事务会通过用户事务请求锁。所有的锁都会通过事务来持有，一直到事务被提交或者被终止。但是SQLite的语句子事务会使用单独的一个日志文件来记录存储日志记录。语句级日志是一个临时文件，但是在事务因为终止等被要求恢复数据库的时候，是不会使用该文件的。SQLite会在语句级日志文件和一些主回滚日志文件中均写入一些日志记录。当且仅当对应的页面在子事务开始之前或者页面已经被前一个子事务添加进数据库的时候，页面已经被写入回滚日志文件的时候，日志记录才会被写入语句级文件。</p>
 
       
-
-        
-        
-        
-
-        
-        
-
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/08/17/2020-08-17_db-system-design-imp(Pager)/" itemprop="url">
-              
-                <span itemprop="name">The Pager Module</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-08-17T00:00:00+08:00"
-              content="2020-08-17" >
-          08-17
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
-
-      
-
-        
-        
-        
-
-        
-        
-
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/07/21/20.SQLite-Tokenize/" itemprop="url">
-              
-                <span itemprop="name">SQLite--Tokenize(词法分析器)</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-07-21T00:00:00+08:00"
-              content="2020-07-21" >
-          07-21
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
-
-      
-
-        
-        
-        
-
-        
-        
-
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/07/16/19.SQLite-KeywordHash/" itemprop="url">
-              
-                <span itemprop="name">SQLite--KeywordHash</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-07-16T00:00:00+08:00"
-              content="2020-07-16" >
-          07-16
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
-
-      
-
-        
-        
-        
-
-        
-        
-
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/06/29/18.db-system-design-imp(VM)/" itemprop="url">
-              
-                <span itemprop="name">The Virtual Machine Module</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-06-29T00:00:00+08:00"
-              content="2020-06-29" >
-          06-29
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
-
-      
-
-        
-        
-        
-
-        
-        
-
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/06/12/17.inside-sqlite-chapter-6/" itemprop="url">
-              
-                <span itemprop="name">SQLite引擎</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-06-12T00:00:00+08:00"
-              content="2020-06-12" >
-          06-12
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
-
-      
-
-        
-        
-        
-
-        
-        
-
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/04/19/15.Sqlite-OS/" itemprop="url">
-              
-                <span itemprop="name">SQLite--OS</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-04-19T00:00:00+08:00"
-              content="2020-04-19" >
-          04-19
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
-
-      
-
-        
-        
-        
-
-        
-        
-
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/04/01/14.gomobile-bind/" itemprop="url">
-              
-                <span itemprop="name">解析GoMobile生成的"胶水代码"</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-04-01T00:00:00+08:00"
-              content="2020-04-01" >
-          04-01
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
-
-      
-
     </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/sqlite3/" rel="tag"># sqlite3</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/08/17/2020-08-17_db-system-design-imp(Pager)/" rel="next" title="The Pager Module">
+                <i class="fa fa-chevron-left"></i> The Pager Module
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/08/25/2020-08-25_db-system-design-im(storage)/" rel="prev" title="Storage">
+                Storage <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
   </div>
   
   
   
-
-  
-  <nav class="pagination">
-    <span class="page-number current">1</span><a class="page-number" href="/archives/page/2/">2</a><a class="page-number" href="/archives/page/3/">3</a><a class="extend next" rel="next" href="/archives/page/2/"><i class="fa fa-angle-right" aria-label="Next page"></i></a>
-  </nav>
+  </article>
 
 
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
 
 
           </div>
           
+
+  
+
+
 
         </div>
         
@@ -742,8 +566,17 @@
       
 
       
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
 
-      <section class="site-overview-wrap sidebar-panel sidebar-panel-active">
+      <section class="site-overview-wrap sidebar-panel">
         <div class="site-overview">
           <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
             
@@ -870,6 +703,22 @@
         </div>
       </section>
 
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BA%8B%E5%8A%A1%E7%B1%BB%E5%9E%8B"><span class="nav-number">1.</span> <span class="nav-text">事务类型</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%B3%BB%E7%BB%9F%E4%BA%8B%E5%8A%A1"><span class="nav-number">1.1.</span> <span class="nav-text">系统事务</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%94%A8%E6%88%B7%E4%BA%8B%E5%8A%A1"><span class="nav-number">1.2.</span> <span class="nav-text">用户事务</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BF%9D%E5%AD%98%E7%82%B9"><span class="nav-number">1.3.</span> <span class="nav-text">保存点</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AF%AD%E5%8F%A5%E5%AD%90%E4%BA%8B%E5%8A%A1"><span class="nav-number">1.4.</span> <span class="nav-text">语句子事务</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%97%A5%E5%BF%97%E7%AE%A1%E7%90%86"><span class="nav-number">2.</span> <span class="nav-text">日志管理</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%97%A5%E5%BF%97%E8%AE%B0%E5%BD%95%E5%8D%8F%E8%AE%AE"><span class="nav-number">2.1.</span> <span class="nav-text">日志记录协议</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8F%90%E4%BA%A4%E5%8D%8F%E8%AE%AE"><span class="nav-number">2.2.</span> <span class="nav-text">提交协议</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%AD%90%E4%BA%8B%E5%8A%A1%E7%AE%A1%E7%90%86"><span class="nav-number">3.</span> <span class="nav-text">子事务管理</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
       
 
       
@@ -1013,6 +862,10 @@
 
 
   
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=6.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=6.1.0"></script>
+
+
 
   
 

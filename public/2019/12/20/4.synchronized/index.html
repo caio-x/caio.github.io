@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="en">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+  
+  
+    
+    
+  <script src="/lib/pace/pace.min.js?v=1.0.2"></script>
+  <link href="/lib/pace/pace-theme-big-counter.min.css?v=1.0.2" rel="stylesheet">
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=6.1.0" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=6.1.0">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=6.1.0">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=6.1.0">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=6.1.0" color="#222">
+
+
+
+
+
+
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Gemini',
+    version: '6.1.0',
+    sidebar: {"position":"left","display":"post","offset":48,"b2t":true,"scrollpercent":true,"onmobile":false},
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="@synchronized是什么？一般来说OC上的语法糖，都可以使用 clang --rewrite-objc code.m 让clang 编译为 c 或 c++ ，由此可以窥探这些语法糖的具体实现。例如，oc的block，@autoreleasepool，@synchronized等等">
+<meta property="og:type" content="article">
+<meta property="og:title" content="oc中@synchronized的性能瓶颈">
+<meta property="og:url" content="https://blog.spade-ace.tech/2019/12/20/4.synchronized/index.html">
+<meta property="og:site_name" content="Spade-Ace">
+<meta property="og:description" content="@synchronized是什么？一般来说OC上的语法糖，都可以使用 clang --rewrite-objc code.m 让clang 编译为 c 或 c++ ，由此可以窥探这些语法糖的具体实现。例如，oc的block，@autoreleasepool，@synchronized等等">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/1ff8b0b7aa6cc03e763e5e3c693c19bf.png">
+<meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/6c4e55e070f1d49f795e3a440fc2cffd.png">
+<meta property="og:image" content="https://caio.ink/wp-content/uploads/2019/12/e9b18665440cf264a15213547cfc6860.png">
+<meta property="article:published_time" content="2019-12-19T16:00:00.000Z">
+<meta property="article:modified_time" content="2020-08-29T14:42:58.501Z">
+<meta property="article:author" content="Caio">
+<meta property="article:tag" content="object-c">
+<meta property="article:tag" content="锁">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/1ff8b0b7aa6cc03e763e5e3c693c19bf.png">
+
+
+
+
+
+
+  <link rel="canonical" href="https://blog.spade-ace.tech/2019/12/20/4.synchronized/"/>
+
+
+
+<script type="text/javascript" id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>oc中@synchronized的性能瓶颈 | Spade-Ace</title>
+  
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style type="text/css">
+    .use-motion .motion-element,
+    .use-motion .brand,
+    .use-motion .menu-item,
+    .sidebar-inner,
+    .use-motion .post-block,
+    .use-motion .pagination,
+    .use-motion .comments,
+    .use-motion .post-header,
+    .use-motion .post-body,
+    .use-motion .collection-title { opacity: initial; }
+
+    .use-motion .logo,
+    .use-motion .site-title,
+    .use-motion .site-subtitle {
+      opacity: initial;
+      top: initial;
+    }
+
+    .use-motion {
+      .logo-line-before i { left: initial; }
+      .logo-line-after i { right: initial; }
+    }
+  </style>
+</noscript>
+
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"> 
+
+<div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Spade-Ace</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">iOS Developer - Caio</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="Toggle navigation bar">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+          
+  <li class="menu-item menu-item-home">
+    <a href="/" rel="section">
+      <i class="menu-item-icon fa fa-fw fa-home"></i> <br />Home</a>
+</li>
+
+      
+        
+        
+          
+  <li class="menu-item menu-item-archives">
+    <a href="/archives/" rel="section">
+      <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />Archives<span class="badge">23</span>
+      </a>
+</li>
+
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />Search</a>
+        </li>
+      
+    </ul>
+  
+
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off"
+             placeholder="Searching..." spellcheck="false"
+             type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+  
+
+
+
+ </div>
+    </header>
+
+    
+  
+  
+  
+    
+      
+    
+    <a href="https://github.com/caio-x" class="github-corner" target="_blank" title="Follow me on GitHub" aria-label="Follow me on GitHub"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#222; color:#fff; position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg>
+    
+      </a>
+    
+
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+    <div class="reading-progress-bar"></div>
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2019/12/20/4.synchronized/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/timg.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Spade-Ace">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">oc中@synchronized的性能瓶颈</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-12-20T00:00:00+08:00">2019-12-20</time>
+            
+
+            
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/%E8%AF%AD%E6%B3%95%E7%B3%96/" itemprop="url" rel="index"><span itemprop="name">语法糖</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="synchronized是什么？"><a href="#synchronized是什么？" class="headerlink" title="@synchronized是什么？"></a>@synchronized是什么？</h2><p>一般来说OC上的语法糖，都可以使用 <code>clang --rewrite-objc code.m</code> 让clang 编译为 c 或 c++ ，由此可以窥探这些语法糖的具体实现。例如，<a target="_blank" rel="noopener" href="https://caio.ink/oc-block-imp/">oc的block</a>，@autoreleasepool，@synchronized等等</p>
+<span id="more"></span>
+
+<p>写一个简单的例子:</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">main</span><span class="params">(<span class="type">int</span> argc, <span class="type">const</span> <span class="type">char</span> * argv[])</span> &#123;</span><br><span class="line">    NSObject *o = [NSObject new];</span><br><span class="line">    @synchronized (o) &#123;</span><br><span class="line">        NSLog(@<span class="string">&quot;helloworld&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>clang 重写后:</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">main</span><span class="params">(<span class="type">int</span> argc, <span class="type">const</span> <span class="type">char</span> * argv[])</span> &#123;</span><br><span class="line">    NSObject *o = ((NSObject *(*)(id, SEL))(<span class="type">void</span> *)objc_msgSend)((id)objc_getClass(<span class="string">&quot;NSObject&quot;</span>), sel_registerName(<span class="string">&quot;new&quot;</span>));</span><br><span class="line">    &#123;</span><br><span class="line">        id _rethrow = <span class="number">0</span>;</span><br><span class="line">        id _sync_obj = (id)o;</span><br><span class="line">		</span><br><span class="line">        objc_sync_enter(_sync_obj);</span><br><span class="line">		</span><br><span class="line">        try &#123;</span><br><span class="line">            <span class="class"><span class="keyword">struct</span> _<span class="title">SYNC_EXIT</span> &#123;</span></span><br><span class="line">                _SYNC_EXIT(id arg) : sync_exit(arg) &#123;&#125;</span><br><span class="line">                ~_SYNC_EXIT()</span><br><span class="line">                &#123;</span><br><span class="line">                    objc_sync_exit(sync_exit);</span><br><span class="line">                &#125;</span><br><span class="line">                id sync_exit;</span><br><span class="line">            &#125; _sync_exit(_sync_obj);</span><br><span class="line"></span><br><span class="line">            NSLog((NSString *)&amp;__NSConstantStringImpl__var_folders_vt_qgsk8yps0js52hgrjtwg9ch80000gn_T_main2_73ab4e_mi_0);</span><br><span class="line">        &#125; catch (id e) &#123;</span><br><span class="line">            _rethrow = e;</span><br><span class="line">        &#125;</span><br><span class="line">		</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="class"><span class="keyword">struct</span> _<span class="title">FIN</span> &#123;</span></span><br><span class="line">                _FIN(id reth) : rethrow(reth) &#123;&#125;</span><br><span class="line">                ~_FIN() &#123;</span><br><span class="line">                    <span class="keyword">if</span> (rethrow)</span><br><span class="line">                        objc_exception_throw(rethrow);</span><br><span class="line">                &#125;</span><br><span class="line">                id rethrow;</span><br><span class="line">            &#125; _fin_force_rethow(_rethrow);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>代码比较清晰：</p>
+<ol>
+<li><code>@synchronized</code> 整个代码块都被try包裹。</li>
+<li>执行try的之前调用 <code>objc_sync_enter(_sync_obj)</code> 进行加锁。</li>
+<li>try代码块内先构建一个C++对象，C++对象的构造器内会传入”被加锁”的对象，并且被这个C++对象持有。</li>
+<li>try代码块结束的时候，也就是C++对象析构的时候，会调用<code>objc_sync_exit(sync_exit)</code>，解锁这个”被加锁”的对象。</li>
+<li>最终在<code>@synchronized</code> 代码块结束的时候，如果catch了异常就再原样把异常抛出去。</li>
+</ol>
+<blockquote>
+<p>上面描述的时候，对<code>被加锁</code>三个字加了引号。OC对象可以被加锁么？先暂且这么说，后文再对此进行解释。</p>
+</blockquote>
+<p>那么现在问题就转变为：</p>
+<ol>
+<li>objc_sync_enter(obj); 加锁</li>
+<li>objc_sync_exit(obj); 解锁</li>
+</ol>
+<h3 id="objc-sync-enter-和-objc-sync-exit"><a href="#objc-sync-enter-和-objc-sync-exit" class="headerlink" title="objc_sync_enter 和 objc_sync_exit"></a>objc_sync_enter 和 objc_sync_exit</h3><p>在<code>libobjc.A.dylib</code>(就是俗称的Runtime)中，有一个 objc-sync.h&#x2F;.m 文件 实现了这两个函数。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">objc_sync_enter</span><span class="params">(id obj)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">int</span> result = OBJC_SYNC_SUCCESS;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (obj) &#123;</span><br><span class="line">        SyncData* data = id2data(obj, ACQUIRE);</span><br><span class="line">        data-&gt;mutex.lock();</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="comment">// @synchronized(nil) does nothing</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">int</span> <span class="title function_">objc_sync_exit</span><span class="params">(id obj)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">int</span> result = OBJC_SYNC_SUCCESS;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">if</span> (obj) &#123;</span><br><span class="line">        SyncData* data = id2data(obj, RELEASE); </span><br><span class="line">        <span class="keyword">if</span> (!data) &#123;</span><br><span class="line">            result = OBJC_SYNC_NOT_OWNING_THREAD_ERROR;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="type">bool</span> okay = data-&gt;mutex.tryUnlock();</span><br><span class="line">            <span class="keyword">if</span> (!okay) &#123;</span><br><span class="line">                result = OBJC_SYNC_NOT_OWNING_THREAD_ERROR;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="comment">// @synchronized(nil) does nothing</span></span><br><span class="line">    &#125;</span><br><span class="line">	</span><br><span class="line">    <span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这个代码也很容易理解，通过<code>id2data</code>,取到与 obj 对应的 <code>SyncData</code>,然后对这个数据结构中的 mutex 进行加解锁操作。也就是说<code>@synchronized</code>加锁的对象是与oc对象绑定的一个mutex锁？</p>
+<h2 id="id2data"><a href="#id2data" class="headerlink" title="id2data"></a>id2data</h2><p>在描述具体实现之前，需要了解以下几个结构体：</p>
+<h4 id="SyncData"><a href="#SyncData" class="headerlink" title="SyncData"></a>SyncData</h4><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="keyword">struct</span> <span class="title function_">alignas</span><span class="params">(CacheLineSize)</span> SyncData &#123;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">SyncData</span>* <span class="title">nextData</span>;</span></span><br><span class="line">    DisguisedPtr&lt;objc_object&gt; object;</span><br><span class="line">    <span class="type">int32_t</span> threadCount;  <span class="comment">// number of THREADS using this block</span></span><br><span class="line">    <span class="type">recursive_mutex_t</span> mutex;</span><br><span class="line">&#125; SyncData;</span><br></pre></td></tr></table></figure>
+<ol>
+<li>SyncData是用来描述每一个”被加锁”的对象。</li>
+<li>SyncData是一个链表，由nextData指向下一个节点。</li>
+<li>object指向这个”被加锁”的对象。</li>
+<li>threadCount记录了正在使用这个节点对象的线程（当没有线程使用这个节点的时候，它才会被释放）。这里的使用是指已经加锁，或者正在等待锁。</li>
+<li>mutex 递归锁(os_unfair_recursive_lock),真正加锁、解锁的锁对象。</li>
+</ol>
+<h4 id="SyncCache"><a href="#SyncCache" class="headerlink" title="SyncCache"></a>SyncCache</h4><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">SyncCache</span> &#123;</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">int</span> allocated;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">int</span> used;</span><br><span class="line">    SyncCacheItem <span class="built_in">list</span>[<span class="number">0</span>];</span><br><span class="line">&#125; SyncCache;</span><br></pre></td></tr></table></figure>
+<ol>
+<li>SyncCache 是存储在TLS(本地线程存储)中的，用来记录当前线程所有已经持有锁的<code>SyncData</code>。（排除TLS中快速缓存的那一个，下文会具体说）</li>
+<li>list是一个<code>SyncCacheItem</code>数组,<code>SyncCacheItem</code>里就只有两个东西，一个是<code>SyncData</code>，另一个就是lockCount，lockCount记录了当前线程对这个对象加锁次数。（@synchronized是一个可重入的递归锁）</li>
+<li>allocated是已分配的cache大小，used是已使用大小。默认情况下，每个线程首次创建的时候会有4个size的容量。当每次插槽不够的时候会指数级扩大这个大小。</li>
+</ol>
+<p>id2data的代码比较长，简单来说这个方法的目的就是，获取到这个id对象所对应(绑定)的SyncData,然后…调用syncData.mutex.lock()</p>
+<p><strong>那么这个SyncData在哪呢？应该怎么去取它呢？</strong></p>
+<p>简单概括一下：</p>
+<ol>
+<li><code>TLS</code>:大部分情况下，开发者在某一个线程对某一个对象的同步锁中，再嵌套其他对象的同步锁的概率，要远低于只用一个同步锁。（<strong>其实有多个锁嵌套的时候，这时候是不是应该要考虑代码结构有问题了</strong>）所以苹果在设计这个锁的时候，会优先在<code>TLS</code>中预留一个<code>SyncData</code>。即优先向<code>TLS</code>中读取或者写入，注释上称它为fast cache。</li>
+<li><code>SyncCache</code>中:上面已经提及，对于每一个线程已经获得的锁，都会在<code>TLS</code>中存储的<code>SyncCache</code>结构体中。<code>SyncCache</code>中的数组存储的就是当前线程已经获取的锁对应的<code>SyncData</code>了。</li>
+<li>全局数据中： 如果在1，2中都没有找到，那么说明当前线程尚未对这个对象持有锁。<code>static StripedMap&lt;SyncList&gt; sDataLists</code>这个全局数据结构记录了进程内所有已经被持有同步锁或者曾经被持有过的对象。<code>sDataList</code>是个重写的Map，key是同步锁对象，value是<code>SyncList</code>。</li>
+</ol>
+<p>说明一下这个 aDataLists：</p>
+<ul>
+<li>StripedMap通过对key(id对象)的地址做一了一系列偏移和对mapsize的求模操作，把对象散列在64个（iPhone上是8个）插槽中。每个插槽内是一个<code>SyncData</code>链表，即<code>SyncList</code>结构体。<code>SyncList</code>内有一个<code>spinlock_t</code>,也就是对这个链表进行操作的时候的锁。</li>
+<li>另外如果在StripedMap没有找到这个对象，那么会从SyncList中找一个已经释放的<code>SyncData</code>(threadCount&#x3D;&#x3D;0，即既没有线程持有，也没有线程在等待)来复用</li>
+</ul>
+<p>最后总结一下<code>id2data</code>这个函数的操作步骤：</p>
+<ol>
+<li>通过 <code>SYNC_DATA_DIRECT_KEY</code>和<code>SYNC_COUNT_DIRECT_KEY</code>这两个key优先从TLS中查询<code>SyncData</code>,根据操作类型（加、解）分别修改TLS中的值，返回<code>SyncData</code>。</li>
+<li>通过遍历TLS中的<code>SyncCache</code>数组，找到该对象的<code>SyncData</code>，根据操作类型（加、解）分别修改<code>SyncCacheItem</code>中的lockCount，返回<code>SyncData</code>。</li>
+<li>1，2都没有，那么去找其他线程已经持有或者曾经被持有过同步锁的<code>SyncData</code>对象：从<code>sDataLists</code>中找到当前需要加同步锁对象对应散列的插槽<code>SyncList</code>，从<code>SyncList</code>中找到这个对象对应的或者复用的<code>SyncData</code>。</li>
+<li>如果第3步都没有找到（说明是整个进程内第一次加锁），那就创建一个<code>SyncData</code>。并且加到<code>SyncList</code>的队首。</li>
+<li>如果<code>TLS</code>中<code>SYNC_DATA_DIRECT_KEY</code>是空的，那么优先保存。<strong>否则</strong>保存到<code>SyncCache</code>中</li>
+</ol>
+<p>注:<br>1，2两步骤中在lockCount减小到0的时候，也就是当前线程需要释放SyncData（实际并不会释放）的时候。会同时修改<code>SyncData</code>中的threadCount,这个操作必须是原子操作。因为前者操作必然是在当前线程，但是后者操作可能是多线程的。（以及3步骤中，在持有并返回其他线程已经加同步锁的<code>SyncData</code>对象。）</p>
+<h3 id="synchronized的性能到底差在哪？？"><a href="#synchronized的性能到底差在哪？？" class="headerlink" title="@synchronized的性能到底差在哪？？"></a>@synchronized的性能到底差在哪？？</h3><p>很多文章在对比各种锁的性能，都提到了@synchronized性能是最差的。那么到底差在哪呢？</p>
+<p>上文已经具体分析了@synchronized的所有实现逻辑了，但是可能并没有一个概念，到底差在哪？</p>
+<p>怀疑以下的两个点：</p>
+<ol>
+<li><code>id2data</code>即在<code>TLS</code>,<code>SyncCache</code>,<code>sDataLists</code>寻找对应同步锁对象的过程</li>
+<li><code>SyncData</code>中的锁。</li>
+</ol>
+<p>先做一个实验对比一下同步锁有多慢。</p>
+<p><strong>以下实验只是为了做一个定性的分析，所有数据只提供一个参考。</strong></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">main</span><span class="params">()</span>&#123;</span><br><span class="line">		NSObject *t = [NSObject new];</span><br><span class="line">		<span class="type">uint64_t</span> pre = mach_absolute_time();</span><br><span class="line">        <span class="type">int</span> count = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> index = <span class="number">0</span>; index &lt; <span class="number">10000000</span>; index++) &#123;</span><br><span class="line">            @synchronized (t) &#123;</span><br><span class="line">                count ++;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="type">uint64_t</span> now = mach_absolute_time();</span><br><span class="line">        <span class="type">uint64_t</span> deltaA = now-pre;</span><br><span class="line">        NSLog(@<span class="string">&quot;synchronized count:%d time:%llu&quot;</span>, count, deltaA/<span class="number">1000000</span>);</span><br><span class="line">	</span><br><span class="line">        <span class="type">uint64_t</span> pre1 = mach_absolute_time();</span><br><span class="line">        count = <span class="number">0</span>;</span><br><span class="line">        <span class="type">pthread_mutex_t</span> mutex = PTHREAD_MUTEX_INITIALIZER;</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> index = <span class="number">0</span>; index &lt; <span class="number">10000000</span>; index++) &#123;</span><br><span class="line">            pthread_mutex_lock(&amp;mutex);</span><br><span class="line">            count ++;</span><br><span class="line">            pthread_mutex_unlock(&amp;mutex);</span><br><span class="line">        &#125;</span><br><span class="line">	</span><br><span class="line">        <span class="type">uint64_t</span> now1 = mach_absolute_time();</span><br><span class="line">	</span><br><span class="line">        <span class="type">uint64_t</span> deltaB = now1-pre1;</span><br><span class="line">        NSLog(@<span class="string">&quot;count:%d time:%llu&quot;</span>, count, deltaB/<span class="number">1000000</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>分别对 pthread_mutex 和 synchronized 加锁 一百万次。<br>pthread_mutex:200ms<br>synchronized:6800ms</p>
+<p>似乎…em…差了不是一点点呢…</p>
+<p>因为上面的测试代码中，同步锁，每一次循环都会执行一遍<code>加锁..存入TLS..释放..从TLS移除</code>。我们试试在最外层套一个同步锁,这样每次都会在<code>TLS</code>中命中。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">main</span><span class="params">()</span>&#123;</span><br><span class="line">		NSObject *t = [NSObject new];</span><br><span class="line">	@synchronized(t)&#123;</span><br><span class="line">		<span class="type">uint64_t</span> pre = mach_absolute_time();</span><br><span class="line">        <span class="type">int</span> count = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> index = <span class="number">0</span>; index &lt; <span class="number">10000000</span>; index++) &#123;</span><br><span class="line">            @synchronized (t) &#123;</span><br><span class="line">                count ++;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="type">uint64_t</span> now = mach_absolute_time();</span><br><span class="line">        <span class="type">uint64_t</span> deltaA = now-pre;</span><br><span class="line">        NSLog(@<span class="string">&quot;synchronized count:%d time:%llu&quot;</span>, count, deltaA/<span class="number">1000000</span>);</span><br><span class="line">	</span><br><span class="line">        <span class="type">uint64_t</span> pre1 = mach_absolute_time();</span><br><span class="line">        count = <span class="number">0</span>;</span><br><span class="line">        <span class="type">pthread_mutex_t</span> mutex = PTHREAD_MUTEX_INITIALIZER;</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> index = <span class="number">0</span>; index &lt; <span class="number">10000000</span>; index++) &#123;</span><br><span class="line">            pthread_mutex_lock(&amp;mutex);</span><br><span class="line">            count ++;</span><br><span class="line">            pthread_mutex_unlock(&amp;mutex);</span><br><span class="line">        &#125;</span><br><span class="line">	</span><br><span class="line">        <span class="type">uint64_t</span> now1 = mach_absolute_time();</span><br><span class="line">	</span><br><span class="line">        <span class="type">uint64_t</span> deltaB = now1-pre1;</span><br><span class="line">        NSLog(@<span class="string">&quot;count:%d time:%llu&quot;</span>, count, deltaB/<span class="number">1000000</span>);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>pthread_mutex:200ms<br>synchronized:2700ms</p>
+<p>似乎..快了..不少呢..</p>
+<p>但是这样测试下去，没法获得准确的结果。我们直接调试Runtime的源码，通过修改源码来“控制变量”。</p>
+<hr>
+<p>这里有一个小插曲:</p>
+<p>在尝试通过修改源码的来实验的时候，<code>synchronized</code>的执行时间总是出奇的长。于是我把objc-sync.mm中 <code>objc_sync_enter</code> 和 <code>objc_sync_exit</code>方法改为空操作，直接返回。</p>
+<p>结果，synchronized的执行时间居然还维持在1000ms+。</p>
+<p>汇编代码显示，还有一个objc_retain方法。<br><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/1ff8b0b7aa6cc03e763e5e3c693c19bf.png"></p>
+<p>也就是说，编译器在synchronized代码块中还会自动插入代码，持有这个同步锁对象。</p>
+<p>因为测试代码不涉及到多线程间对象的持有和释放，所有我们直接把它改为mrc。</p>
+<p>执行时间变为 40ms+，objc_retain也确实没有了。<br><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/6c4e55e070f1d49f795e3a440fc2cffd.png"></p>
+<p>也就是说，引用计数占了1000ms+。以下实验均在mrc下</p>
+<h4 id="同步锁对象寻找过程"><a href="#同步锁对象寻找过程" class="headerlink" title="同步锁对象寻找过程"></a>同步锁对象寻找过程</h4><p>修改源码，让 <code>objc_sync_enter</code> 和 <code>objc_sync_exit</code>方法只执行查询操作，不执行锁操作。</p>
+<p>整个查询过程的执行时间在 900ms+</p>
+<h4 id="锁过程"><a href="#锁过程" class="headerlink" title="锁过程"></a>锁过程</h4><p>同步锁最终还是使用的<code>SyncData</code>中的<code>os_unfair_recursive_lock</code>实现的递归锁。</p>
+<p>这个锁是苹果用来代替已废弃的 OSPinLock 的，OSPinLock让CPU空转，而不会让出时间片，在GCD的线程优先级上会出现饥饿或者死锁问题。具体的可以看<a target="_blank" rel="noopener" href="https://blog.ibireme.com/2016/01/16/spinlock_is_unsafe_in_ios/">这篇文章</a>。</p>
+<p><code>os_unfair_lock</code>锁的线程会处于休眠状态，从用户态切换到内核态，而并非忙等<br><img src="https://caio.ink/wp-content/uploads/2019/12/e9b18665440cf264a15213547cfc6860.png"></p>
+<p>直接测试一下，递归锁的加锁解锁效率。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">os_unfair_recursive_lock_s</span> &#123;</span></span><br><span class="line">    os_unfair_lock ourl_lock;</span><br><span class="line">    <span class="type">uint32_t</span> ourl_count;</span><br><span class="line">&#125; os_unfair_recursive_lock;</span><br></pre></td></tr></table></figure>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">os_unfair_recursive_lock lock = ((os_unfair_recursive_lock)&#123;OS_UNFAIR_LOCK_INIT, <span class="number">0</span>&#125;);</span><br><span class="line">os_unfair_recursive_lock *mlock = &amp;lock;</span><br><span class="line"><span class="keyword">for</span> (<span class="type">int</span> index = <span class="number">0</span>; index &lt; <span class="number">10000000</span>; index++) &#123;</span><br><span class="line">    os_unfair_recursive_lock_lock_with_options(&amp;lock, <span class="number">0x00000000</span>);</span><br><span class="line">        count ++;</span><br><span class="line">    os_unfair_recursive_lock_tryunlock4objc(&amp;lock);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>如果只是锁的话，执行时间只有200ms。<code>os_unfair_lock</code>的执行效率比<code>pthread_mutex</code>略高。而且当执行次数越多，这个差距稳定在10%</p>
+<p>引用计数 1000ms+同步锁对象查询900ms+递归锁200ms &#x3D; 2100ms</p>
+<p>距离第二次的实验还差500ms左右。500ms花费在哪？</p>
+<p>objc-os.h有一个LOCKDEBUG的宏，在debug期间会有一些耗时判断，把宏关闭之后，上面的第二次实验的时间就从2900ms -&gt; 2100ms左右，与上面的计算就对应上了。</p>
+<blockquote>
+<p>总结一下:<br>1.synchronized同步锁使用的 os_unfair_lock 本身性能是不差的，甚至优于pthread_mutex。<br>2.synchronized的性能，主要是花费在实现这个语法糖上。引用计数的管理和查找与对象绑定的同步锁消耗了绝大部分的时间。而且上面的实验我们还只是在TLS内操作了，如果一个线程内持有的同步锁个数越多，那么将花费在Cache上和全局数据内的查询时间也会更多。</p>
+</blockquote>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/object-c/" rel="tag"># object-c</a>
+          
+            <a href="/tags/%E9%94%81/" rel="tag"># 锁</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/12/17/3.binding-symbols/" rel="next" title="动态库的符号地址绑定">
+                <i class="fa fa-chevron-left"></i> 动态库的符号地址绑定
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/12/21/6.leetcode32/" rel="prev" title="最长有效括号 -- LeetCode[32]">
+                最长有效括号 -- LeetCode[32] <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/timg.gif"
+                alt="" />
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/%7C%7Carchive">
+                
+                    <span class="site-state-item-count">23</span>
+                    <span class="site-state-item-name">posts</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">6</span>
+                    <span class="site-state-item-name">categories</span>
+                  
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-tags">
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">tags</span>
+                  
+                </div>
+              
+            </nav>
+          
+
+          
+
+          
+            <div class="links-of-author motion-element">
+              
+                <span class="links-of-author-item">
+                  <a href="https://github.com/caio-x" target="_blank" title="GitHub"><i class="fa fa-fw fa-github"></i>GitHub</a>
+                  
+                </span>
+              
+                <span class="links-of-author-item">
+                  <a href="mailto:omblcky@gmail.com" target="_blank" title="E-Mail"><i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                  
+                </span>
+              
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#synchronized%E6%98%AF%E4%BB%80%E4%B9%88%EF%BC%9F"><span class="nav-number">1.</span> <span class="nav-text">@synchronized是什么？</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#objc-sync-enter-%E5%92%8C-objc-sync-exit"><span class="nav-number">1.1.</span> <span class="nav-text">objc_sync_enter 和 objc_sync_exit</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#id2data"><span class="nav-number">2.</span> <span class="nav-text">id2data</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#SyncData"><span class="nav-number">2.0.1.</span> <span class="nav-text">SyncData</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#SyncCache"><span class="nav-number">2.0.2.</span> <span class="nav-text">SyncCache</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#synchronized%E7%9A%84%E6%80%A7%E8%83%BD%E5%88%B0%E5%BA%95%E5%B7%AE%E5%9C%A8%E5%93%AA%EF%BC%9F%EF%BC%9F"><span class="nav-number">2.1.</span> <span class="nav-text">@synchronized的性能到底差在哪？？</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%90%8C%E6%AD%A5%E9%94%81%E5%AF%B9%E8%B1%A1%E5%AF%BB%E6%89%BE%E8%BF%87%E7%A8%8B"><span class="nav-number">2.1.1.</span> <span class="nav-text">同步锁对象寻找过程</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%94%81%E8%BF%87%E7%A8%8B"><span class="nav-number">2.1.2.</span> <span class="nav-text">锁过程</span></a></li></ol></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+        <div class="back-to-top">
+          <i class="fa fa-arrow-up"></i>
+          
+            <span id="scrollpercent"><span>0</span>%</span>
+          
+        </div>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; 2019 &mdash; <span itemprop="copyrightYear">2022</span>
+  <span class="with-love" id="animate"> 
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Caio</span>
+
+  
+
+  
+</div>
+
+
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/theme-next/hexo-theme-next">NexT.Gemini</a> v6.1.0</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="//cdn.jsdelivr.net/gh/theme-next/theme-next-reading-progress@1/reading_progress.min.js"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=6.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=6.1.0"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=6.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=6.1.0"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=6.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=6.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=6.1.0"></script>
+
+
+
+  
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
+</html>

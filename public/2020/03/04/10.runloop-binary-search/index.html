@@ -106,22 +106,28 @@
 
 
 
-  <meta name="description" content="Spade-Ace&amp;apos; Tech Blog">
-<meta property="og:type" content="website">
-<meta property="og:title" content="Spade-Ace">
-<meta property="og:url" content="https://blog.spade-ace.tech/archives/index.html">
+  <meta name="description" content="在RunLoop的Timer管理中，需要对每定时器进行有序管理——按照时间先后排序。这个必然会带来一个查找和排序。在RunLoop 中使用的是二分查找法，但是这个二分查找与平时的二分查找不太一样。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="RunLoop中&quot;奇怪&quot;的二分查找">
+<meta property="og:url" content="https://blog.spade-ace.tech/2020/03/04/10.runloop-binary-search/index.html">
 <meta property="og:site_name" content="Spade-Ace">
-<meta property="og:description" content="Spade-Ace&amp;apos; Tech Blog">
+<meta property="og:description" content="在RunLoop的Timer管理中，需要对每定时器进行有序管理——按照时间先后排序。这个必然会带来一个查找和排序。在RunLoop 中使用的是二分查找法，但是这个二分查找与平时的二分查找不太一样。">
 <meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2020/03/639b55053de9d6dc5d2307c9d3787fb1.png">
+<meta property="article:published_time" content="2020-03-03T16:00:00.000Z">
+<meta property="article:modified_time" content="2020-08-29T14:42:58.494Z">
 <meta property="article:author" content="Caio">
+<meta property="article:tag" content="object-c">
+<meta property="article:tag" content="二分法">
 <meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2020/03/639b55053de9d6dc5d2307c9d3787fb1.png">
 
 
 
 
 
 
-  <link rel="canonical" href="https://blog.spade-ace.tech/archives/"/>
+  <link rel="canonical" href="https://blog.spade-ace.tech/2020/03/04/10.runloop-binary-search/"/>
 
 
 
@@ -131,7 +137,7 @@
   };
 </script>
 
-  <title>Archive | Spade-Ace</title>
+  <title>RunLoop中"奇怪"的二分查找 | Spade-Ace</title>
   
 
 
@@ -178,7 +184,7 @@
     
   
 
-  <div class="container sidebar-position-left page-archive">
+  <div class="container sidebar-position-left page-post-detail">
     <div class="headband"></div>
 
     <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
@@ -303,425 +309,210 @@
           
             
 
-    
-    
-      
-      
-    
-      
-      
-    
-    
-
-  
-
-
           
           <div id="content" class="content">
             
 
+  <div id="posts" class="posts-expand">
+    
+
+  
+
   
   
   
-  <div class="post-block archive">
-    <div id="posts" class="posts-collapse">
-      <span class="archive-move-on"></span>
 
-      
+  
+    <div class="reading-progress-bar"></div>
+  
 
-      
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2020/03/04/10.runloop-binary-search/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/timg.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Spade-Ace">
+    </span>
+
+    
+      <header class="post-header">
 
         
         
+          <h1 class="post-title" itemprop="name headline">RunLoop中"奇怪"的二分查找</h1>
         
 
-        
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-03-04T00:00:00+08:00">2020-03-04</time>
+            
+
+            
+            
+
+            
+          </span>
+
           
-          <div class="collection-title">
-            <h1 class="archive-year" id="archive-year-2020">2020</h1>
-          </div>
-        
-        
-
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/08/29/2020-08-29_db_system_design_imp(WAL)/" itemprop="url">
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
               
-                <span itemprop="name">WAL Mode</span>
+                <span class="post-meta-item-text">In</span>
               
-            </a>
-        
-      </h2>
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/%E7%AE%97%E6%B3%95/" itemprop="url" rel="index"><span itemprop="name">算法</span></a></span>
 
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-08-29T00:00:00+08:00"
-              content="2020-08-29" >
-          08-29
-        </time>
-      </div>
+                
+                
+              
+            </span>
+          
 
-    </header>
-  </article>
+          
+            
+          
 
+          
+          
 
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
 
       
-
-        
-        
-        
-
-        
-        
-
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/08/25/2020-08-25_db-system-design-im(storage)/" itemprop="url">
-              
-                <span itemprop="name">Storage</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-08-25T00:00:00+08:00"
-              content="2020-08-25" >
-          08-25
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
-
       
 
-        
-        
-        
+      
+        <blockquote>
+<p>在RunLoop的Timer管理中，需要对每定时器进行有序管理——按照时间先后排序。这个必然会带来一个查找和排序。在RunLoop 中使用的是二分查找法，但是这个二分查找与平时的二分查找不太一样。</p>
+</blockquote>
+<span id="more"></span>
 
-        
-        
+<h3 id="先上代码"><a href="#先上代码" class="headerlink" title="先上代码"></a>先上代码</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">//利用二分法按照fireTSR的大小插入排序</span><br><span class="line">static CFIndex __CFRunLoopInsertionIndexInTimerArray(CFArrayRef array, CFRunLoopTimerRef rlt) __attribute__((noinline));</span><br><span class="line">static CFIndex __CFRunLoopInsertionIndexInTimerArray(CFArrayRef array, CFRunLoopTimerRef rlt) &#123;</span><br><span class="line">    CFIndex cnt = CFArrayGetCount(array);</span><br><span class="line">    if (cnt &lt;= 0) &#123;</span><br><span class="line">        return 0;</span><br><span class="line">    &#125;</span><br><span class="line">    if (256 &lt; cnt) &#123;//count 小于256个时候优先判断 第一个和最后一个</span><br><span class="line">        CFRunLoopTimerRef item = (CFRunLoopTimerRef)CFArrayGetValueAtIndex(array, cnt - 1);</span><br><span class="line">        if (item-&gt;_fireTSR &lt;= rlt-&gt;_fireTSR) &#123;</span><br><span class="line">            return cnt;</span><br><span class="line">        &#125;</span><br><span class="line">        item = (CFRunLoopTimerRef)CFArrayGetValueAtIndex(array, 0);</span><br><span class="line">        if (rlt-&gt;_fireTSR &lt; item-&gt;_fireTSR) &#123;</span><br><span class="line">            return 0;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">	//开始二分查找</span><br><span class="line">    CFIndex add = (1 &lt;&lt; flsl(cnt)) * 2;</span><br><span class="line">    CFIndex idx = 0;</span><br><span class="line">    Boolean lastTestLEQ;</span><br><span class="line">    do &#123;</span><br><span class="line">        add = add / 2;</span><br><span class="line">	    lastTestLEQ = false;</span><br><span class="line">        CFIndex testIdx = idx + add;</span><br><span class="line">        if (testIdx &lt; cnt) &#123;</span><br><span class="line">            CFRunLoopTimerRef item = (CFRunLoopTimerRef)CFArrayGetValueAtIndex(array, testIdx);</span><br><span class="line">            if (item-&gt;_fireTSR &lt;= rlt-&gt;_fireTSR) &#123;</span><br><span class="line">                idx = testIdx;</span><br><span class="line">		        lastTestLEQ = true;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; while (0 &lt; add);</span><br><span class="line"></span><br><span class="line">    return lastTestLEQ ? idx + 1 : idx;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/08/21/2020-08-21_db-system-design-imp(Transaction)/" itemprop="url">
-              
-                <span itemprop="name">Transaction Management</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-08-21T00:00:00+08:00"
-              content="2020-08-21" >
-          08-21
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
+<p>这里不详细讲述普通二分查找算法了，直接看这个算法。</p>
+<p>二分查找的时间复杂度是在O(log N)，也就是说，在log N次查询之内必然是可以有搜索结果的。</p>
+<blockquote>
+<p>下图就是两次搜索的演示过程</p>
+</blockquote>
+<p><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2020/03/639b55053de9d6dc5d2307c9d3787fb1.png"></p>
+<p>传统的二分查找，是二分区间，每次从一个区间中去选择前半区或者后半区。而这里的二分分的是 <code>add</code> 的长度。代码中的<code>idx</code>是 <code>区间查找法</code> 中的区间 start，因为每次二分的 <code>idx</code> 是否需要指向 <code>testIdx</code>，这个判断就是 <code>区间查找法</code>中的前后半区选择，其中 <code>end = idx + start</code> 所以说，add 隐藏了区间的 end。</p>
+<p>代码很简短，输入一个数组，一个定时器，返回这个定时器应该在这个数组中插入的Index。</p>
+<ol>
+<li><p>先判断如果当前数组内的数量少于256个，优先判断最后一个和第一个。这个问题我想，是否是因为在大部分情况下，定时器都不会超过256个，并且，定时器一般..大部分情况下都是往后增加。所以算法在最开始的时候，通过一个if判断快速处理了，大部分的使用情况。避免了每次都要进行O(log n)时间的搜索。</p>
+</li>
+<li><p>按照上面的演示过程，执行二分查找。但是在二分查找之前还有一段代码:<code>CFIndex add = (1 &lt;&lt; flsl(cnt)) * 2;</code> 为什么add的起始点不是<code>cnt</code>？<code>flsl()</code>函数是获得<code>cnt</code>用二进制表示时最大有效位数。例如，(flsl(256) 的结果是 9)。如果cnt是256，add的值将会变成1024。1左移9位是512，512再乘2，1024。<code>向上取整</code>：保证add是2的n次幂，这样就不用考虑奇偶问题了。</p>
+</li>
+</ol>
+<p>ps：上面那个例子，为什么需要左移9位再乘2？直接左移8位不行？</p>
 
       
-
-        
-        
-        
-
-        
-        
-
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/08/17/2020-08-17_db-system-design-imp(Pager)/" itemprop="url">
-              
-                <span itemprop="name">The Pager Module</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-08-17T00:00:00+08:00"
-              content="2020-08-17" >
-          08-17
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
-
-      
-
-        
-        
-        
-
-        
-        
-
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/07/21/20.SQLite-Tokenize/" itemprop="url">
-              
-                <span itemprop="name">SQLite--Tokenize(词法分析器)</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-07-21T00:00:00+08:00"
-              content="2020-07-21" >
-          07-21
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
-
-      
-
-        
-        
-        
-
-        
-        
-
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/07/16/19.SQLite-KeywordHash/" itemprop="url">
-              
-                <span itemprop="name">SQLite--KeywordHash</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-07-16T00:00:00+08:00"
-              content="2020-07-16" >
-          07-16
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
-
-      
-
-        
-        
-        
-
-        
-        
-
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/06/29/18.db-system-design-imp(VM)/" itemprop="url">
-              
-                <span itemprop="name">The Virtual Machine Module</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-06-29T00:00:00+08:00"
-              content="2020-06-29" >
-          06-29
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
-
-      
-
-        
-        
-        
-
-        
-        
-
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/06/12/17.inside-sqlite-chapter-6/" itemprop="url">
-              
-                <span itemprop="name">SQLite引擎</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-06-12T00:00:00+08:00"
-              content="2020-06-12" >
-          06-12
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
-
-      
-
-        
-        
-        
-
-        
-        
-
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/04/19/15.Sqlite-OS/" itemprop="url">
-              
-                <span itemprop="name">SQLite--OS</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-04-19T00:00:00+08:00"
-              content="2020-04-19" >
-          04-19
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
-
-      
-
-        
-        
-        
-
-        
-        
-
-        
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2020/04/01/14.gomobile-bind/" itemprop="url">
-              
-                <span itemprop="name">解析GoMobile生成的"胶水代码"</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-04-01T00:00:00+08:00"
-              content="2020-04-01" >
-          04-01
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
-
-      
-
     </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/object-c/" rel="tag"># object-c</a>
+          
+            <a href="/tags/%E4%BA%8C%E5%88%86%E6%B3%95/" rel="tag"># 二分法</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/01/13/9.LeetCode-week-match/" rel="next" title="leetcode -- 周赛双周赛">
+                <i class="fa fa-chevron-left"></i> leetcode -- 周赛双周赛
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/03/13/11.dyld/" rel="prev" title="详解 dyld 加载过程">
+                详解 dyld 加载过程 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
   </div>
   
   
   
-
-  
-  <nav class="pagination">
-    <span class="page-number current">1</span><a class="page-number" href="/archives/page/2/">2</a><a class="page-number" href="/archives/page/3/">3</a><a class="extend next" rel="next" href="/archives/page/2/"><i class="fa fa-angle-right" aria-label="Next page"></i></a>
-  </nav>
+  </article>
 
 
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
 
 
           </div>
           
+
+  
+
+
 
         </div>
         
@@ -742,8 +533,17 @@
       
 
       
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
 
-      <section class="site-overview-wrap sidebar-panel sidebar-panel-active">
+      <section class="site-overview-wrap sidebar-panel">
         <div class="site-overview">
           <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
             
@@ -870,6 +670,22 @@
         </div>
       </section>
 
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%85%88%E4%B8%8A%E4%BB%A3%E7%A0%81"><span class="nav-number">1.</span> <span class="nav-text">先上代码</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
       
 
       
@@ -1013,6 +829,10 @@
 
 
   
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=6.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=6.1.0"></script>
+
+
 
   
 

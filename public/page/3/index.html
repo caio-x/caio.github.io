@@ -109,7 +109,7 @@
   <meta name="description" content="Spade-Ace&amp;apos; Tech Blog">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Spade-Ace">
-<meta property="og:url" content="https://blog.spade-ace.tech/index.html">
+<meta property="og:url" content="https://blog.spade-ace.tech/page/3/index.html">
 <meta property="og:site_name" content="Spade-Ace">
 <meta property="og:description" content="Spade-Ace&amp;apos; Tech Blog">
 <meta property="og:locale" content="en_US">
@@ -121,7 +121,7 @@
 
 
 
-  <link rel="canonical" href="https://blog.spade-ace.tech/"/>
+  <link rel="canonical" href="https://blog.spade-ace.tech/page/3/"/>
 
 
 
@@ -324,7 +324,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2020/08/29/2020-08-29_db_system_design_imp(WAL)/">
+    <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2019/12/17/3.binding-symbols/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="">
@@ -343,7 +343,7 @@
         
           <h1 class="post-title" itemprop="name headline">
                 
-                <a class="post-title-link" href="/2020/08/29/2020-08-29_db_system_design_imp(WAL)/" itemprop="url">WAL Mode</a></h1>
+                <a class="post-title-link" href="/2019/12/17/3.binding-symbols/" itemprop="url">动态库的符号地址绑定</a></h1>
         
 
         <div class="post-meta">
@@ -355,7 +355,7 @@
               
                 <span class="post-meta-item-text">Posted on</span>
               
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-08-29T00:00:00+08:00">2020-08-29</time>
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-12-17T00:00:00+08:00">2019-12-17</time>
             
 
             
@@ -376,7 +376,7 @@
                 <span class="post-meta-item-text">In</span>
               
               
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/sqlite3/" itemprop="url" rel="index"><span itemprop="name">sqlite3</span></a></span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/%E5%8A%A8%E6%80%81%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">动态库</span></a></span>
 
                 
                 
@@ -412,11 +412,17 @@
       
         
           
-          在版本为release 3.7.0的版本上，SQLite介绍了一种新的日志机制，叫WAL日志。这个日志模式与传统回滚日志模式二选一。可以通过pragma journal_mode=WAL指令来开启这个模式。当数据库在WAL模式下(在Pager文章内提到，日志文件的头偏移量处于18位置的值是2)，SQ
+          Linux的共享库的重定位和符号绑定动态共享库在进程间共享时，有两种符号链接方式：
+
+装载时重定位
+PIC（位置无关代码）
+
+装载时重定位在首次使用某个动态库的时候，动态链接器会把磁盘上的这个库文件，映射到某块物理内存上。
+在此之后，动态链接器加载动态库的时候，会根据当前内存的情况，分配对应的一块虚
           ...
           <!--noindex-->
           <div class="post-button text-center">
-            <a class="btn" href="/2020/08/29/2020-08-29_db_system_design_imp(WAL)/" rel="contents">
+            <a class="btn" href="/2019/12/17/3.binding-symbols/" rel="contents">
               Read more &raquo;
             </a>
           </div>
@@ -472,7 +478,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2020/08/25/2020-08-25_db-system-design-im(storage)/">
+    <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2019/12/11/2.leetcode5/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="">
@@ -491,7 +497,7 @@
         
           <h1 class="post-title" itemprop="name headline">
                 
-                <a class="post-title-link" href="/2020/08/25/2020-08-25_db-system-design-im(storage)/" itemprop="url">Storage</a></h1>
+                <a class="post-title-link" href="/2019/12/11/2.leetcode5/" itemprop="url">Manacher算法 -- LeetCode[5]</a></h1>
         
 
         <div class="post-meta">
@@ -503,7 +509,7 @@
               
                 <span class="post-meta-item-text">Posted on</span>
               
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-08-25T00:00:00+08:00">2020-08-25</time>
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-12-11T00:00:00+08:00">2019-12-11</time>
             
 
             
@@ -524,7 +530,7 @@
                 <span class="post-meta-item-text">In</span>
               
               
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/sqlite3/" itemprop="url" rel="index"><span itemprop="name">sqlite3</span></a></span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/%E7%AE%97%E6%B3%95/" itemprop="url" rel="index"><span itemprop="name">算法</span></a></span>
 
                 
                 
@@ -560,11 +566,13 @@
       
         
           <blockquote>
-<p>本文讨论了SQLite如何在最底层，组织数据库内容和日志文件内容。它定义了这些文件的格式。将一整个数据库文件划分为固定大小的页面，这些页面用来存储B&#x2F;B+树页面，空闲页面，和其他页面。在默认的日志模式下，日志文件将数据库页面的镜像前内容存储为日志记录；但是，在WAL日志模式式下，日志文件存储了数据库页面的更新后的镜像内容。</p>
+<p>  虽然LeetCode上这是一道Medium的题目，题目的解法有很多种。但是其中的最优解，也是本文需要探讨的算法，算是理解难度最高的一种。</p>
 </blockquote>
+<p>拿到这个道题的第一反应，应该是从回文序列的对称中心向两侧看。算出以字符串中每一个字符为中心的最大回文串长度。然后取一个最长的，即为本题解。</p>
+<p>在上述算法过程中，会有一部分算法的”冗余”。所谓算法冗余，即是对重复而无意义数据的计算。而Mangcher算法的优化就是去除了重复和无意义计算的部分。</p>
           <!--noindex-->
           <div class="post-button text-center">
-            <a class="btn" href="/2020/08/25/2020-08-25_db-system-design-im(storage)/" rel="contents">
+            <a class="btn" href="/2019/12/11/2.leetcode5/" rel="contents">
               Read more &raquo;
             </a>
           </div>
@@ -620,7 +628,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2020/08/21/2020-08-21_db-system-design-imp(Transaction)/">
+    <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2019/12/10/1.leetcode41/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="">
@@ -639,7 +647,7 @@
         
           <h1 class="post-title" itemprop="name headline">
                 
-                <a class="post-title-link" href="/2020/08/21/2020-08-21_db-system-design-imp(Transaction)/" itemprop="url">Transaction Management</a></h1>
+                <a class="post-title-link" href="/2019/12/10/1.leetcode41/" itemprop="url">缺失的第一个正整数 -- LeetCode[41]</a></h1>
         
 
         <div class="post-meta">
@@ -651,7 +659,7 @@
               
                 <span class="post-meta-item-text">Posted on</span>
               
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-08-21T00:00:00+08:00">2020-08-21</time>
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-12-10T00:00:00+08:00">2019-12-10</time>
             
 
             
@@ -672,7 +680,7 @@
                 <span class="post-meta-item-text">In</span>
               
               
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/sqlite3/" itemprop="url" rel="index"><span itemprop="name">sqlite3</span></a></span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/%E7%AE%97%E6%B3%95/" itemprop="url" rel="index"><span itemprop="name">算法</span></a></span>
 
                 
                 
@@ -708,1047 +716,11 @@
       
         
           <blockquote>
-<p>数据库管理系统的主要任务就是帮助用户在数据库上操作和存储数据。另外，DBMS还需要在用户的并发调用下保护数据库，以及在应用的崩溃，系统崩溃，系统掉电的情况下保持数据库的一致性。出于这些目的，DBMS在一个抽象的事务中执行所有的数据库操作。对于保持数据库的一致性来说，事务管理非常关键。SQLite依赖原生的文件锁，并且实现了页面日志来实现ACID。SQLite只支持一级事务，也就是说不支持事务嵌套。本文讨论了SQLite是如何实现了事务的ACID，从而更新单个和多个数据库。<code>Pager</code>那一篇文章会解释SQLite事务管理器pager的内部工作原理。</p>
+<p>给定一个未排序的整数数组，找出其中没有出现的最小的正整数，要求O(n)时间，常数空间。</p>
 </blockquote>
           <!--noindex-->
           <div class="post-button text-center">
-            <a class="btn" href="/2020/08/21/2020-08-21_db-system-design-imp(Transaction)/" rel="contents">
-              Read more &raquo;
-            </a>
-          </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
-      
-
-  
-
-  
-  
-  
-
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2020/08/17/2020-08-17_db-system-design-imp(Pager)/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/timg.gif">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Spade-Ace">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2020/08/17/2020-08-17_db-system-design-imp(Pager)/" itemprop="url">The Pager Module</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">Posted on</span>
-              
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-08-17T00:00:00+08:00">2020-08-17</time>
-            
-
-            
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">In</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/sqlite3/" itemprop="url" rel="index"><span itemprop="name">sqlite3</span></a></span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <blockquote>
-<p>本文讨论的是SQLite的Pager模块。本模块在原生操作系统的基础上实现了一个抽象的基于页面的数据库文件系统。它按照固定大小的页面来管理数据，并且定义了一些接口从数据库文件中来操作这些页面。它提供了一个数据库页面的内存缓存，来帮助BTree模块加速操作数据库页面。它不仅仅是一个缓存的管理中心，同样也是实现ACID的事务管理中，以及事务回滚管理。并发控制和回滚机制对于上层模块来说是完全透明的。他可以理解为一个传统数据库管理系统的持久化层。</p>
-</blockquote>
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/2020/08/17/2020-08-17_db-system-design-imp(Pager)/" rel="contents">
-              Read more &raquo;
-            </a>
-          </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
-      
-
-  
-
-  
-  
-  
-
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2020/07/21/20.SQLite-Tokenize/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/timg.gif">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Spade-Ace">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2020/07/21/20.SQLite-Tokenize/" itemprop="url">SQLite--Tokenize(词法分析器)</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">Posted on</span>
-              
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-07-21T00:00:00+08:00">2020-07-21</time>
-            
-
-            
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">In</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/sqlite3/" itemprop="url" rel="index"><span itemprop="name">sqlite3</span></a></span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <blockquote>
-<p>SQLite的词法分析器的代码逻辑其实很简单，但是其中也不乏SQLite对于执行效率的优化。甚至可以说SQLite在追求高效的每一个细节点，都无所不用其极。文章从源码的角度分别看具体的实现逻辑与优化的细节</p>
-</blockquote>
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/2020/07/21/20.SQLite-Tokenize/" rel="contents">
-              Read more &raquo;
-            </a>
-          </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
-      
-
-  
-
-  
-  
-  
-
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2020/07/16/19.SQLite-KeywordHash/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/timg.gif">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Spade-Ace">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2020/07/16/19.SQLite-KeywordHash/" itemprop="url">SQLite--KeywordHash</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">Posted on</span>
-              
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-07-16T00:00:00+08:00">2020-07-16</time>
-            
-
-            
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">In</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/sqlite3/" itemprop="url" rel="index"><span itemprop="name">sqlite3</span></a></span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <blockquote>
-<p>SQLite 的关键字有很多个(在3.27.2版本就支持136个)。从用户侧输入一个SQL语句到Tokenize(词法分析器)的时候，SQLite如何快速判断一个单词是否是关键字呢？第一想法肯定是利用哈希表，SQLite也确实是如此。但是如何构建一个查询高效，存储占用低，而且还支持关键字”裁剪”的哈希表呢？这里从源码的角度来看，SQLite是如何一步一步的精简优化一个词法分析器的关键字查询表的。</p>
-</blockquote>
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/2020/07/16/19.SQLite-KeywordHash/" rel="contents">
-              Read more &raquo;
-            </a>
-          </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
-      
-
-  
-
-  
-  
-  
-
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2020/06/29/18.db-system-design-imp(VM)/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/timg.gif">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Spade-Ace">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2020/06/29/18.db-system-design-imp(VM)/" itemprop="url">The Virtual Machine Module</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">Posted on</span>
-              
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-06-29T00:00:00+08:00">2020-06-29</time>
-            
-
-            
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">In</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/sqlite3/" itemprop="url" rel="index"><span itemprop="name">sqlite3</span></a></span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <p>本文讨论了SQLite虚拟机（VM）是如何解释执行了一个通过SQLite内部的字节码语言编写的程序。VM是存储在本地数据库文件中数据唯一的操作者。它支持5种原始的数据类型:NULL,integer,real,character string,blob,这五种数据类型代表了在文件或者内存中存储的原始的数据项。由VM来完成用户数据和内部数据表示之间的转换。在做表达式评估的时候它也会做一些数据类型转换。VM是如何工作的，以及它在存储表和索引记录到B-，B+树之前，如何做数据格式化。</p>
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/2020/06/29/18.db-system-design-imp(VM)/" rel="contents">
-              Read more &raquo;
-            </a>
-          </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
-      
-
-  
-
-  
-  
-  
-
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2020/06/12/17.inside-sqlite-chapter-6/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/timg.gif">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Spade-Ace">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2020/06/12/17.inside-sqlite-chapter-6/" itemprop="url">SQLite引擎</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">Posted on</span>
-              
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-06-12T00:00:00+08:00">2020-06-12</time>
-            
-
-            
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">In</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/sqlite3/" itemprop="url" rel="index"><span itemprop="name">sqlite3</span></a></span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <blockquote>
-<p>source: inside-sqlite</p>
-</blockquote>
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/2020/06/12/17.inside-sqlite-chapter-6/" rel="contents">
-              Read more &raquo;
-            </a>
-          </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
-      
-
-  
-
-  
-  
-  
-
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2020/04/19/15.Sqlite-OS/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/timg.gif">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Spade-Ace">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2020/04/19/15.Sqlite-OS/" itemprop="url">SQLite--OS</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">Posted on</span>
-              
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-19T00:00:00+08:00">2020-04-19</time>
-            
-
-            
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">In</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/sqlite3/" itemprop="url" rel="index"><span itemprop="name">sqlite3</span></a></span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <blockquote>
-<p>自底向上看sqlite的时候发现自己欠缺和遗忘了好多知识（尤其是操作系统）。如果能把这个sqlite的系列都写完的话，在操作系统上，尤其是文件和内存管理上能有不少的知识复习和提升 :)。</p>
-</blockquote>
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/2020/04/19/15.Sqlite-OS/" rel="contents">
-              Read more &raquo;
-            </a>
-          </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
-      
-
-  
-
-  
-  
-  
-
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2020/04/01/14.gomobile-bind/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/timg.gif">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Spade-Ace">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2020/04/01/14.gomobile-bind/" itemprop="url">解析GoMobile生成的"胶水代码"</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">Posted on</span>
-              
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-01T00:00:00+08:00">2020-04-01</time>
-            
-
-            
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">In</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/GoMobile/" itemprop="url" rel="index"><span itemprop="name">GoMobile</span></a></span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <blockquote>
-<p>标题要唬人…在做Golang跨平台的时候，使用gomobile bind -target&#x3D;ios xxx 就可以生成对应平台的framework。</p>
-</blockquote>
-<p>本文讨论的内容是Golang是如何实现了OC和Go的数据通讯与接口调用，以及如何做到让开发者无感知的从OC对象的引用计数切换到Golang的垃圾回收机制。</p>
-<p>其实Go的语言层面的通讯实际上是由bind生成的中间层的代码来实现的，什么是中间层的代码？我们简单做实验…</p>
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/2020/04/01/14.gomobile-bind/" rel="contents">
+            <a class="btn" href="/2019/12/10/1.leetcode41/" rel="contents">
               Read more &raquo;
             </a>
           </div>
@@ -1793,7 +765,7 @@
 
   
   <nav class="pagination">
-    <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><a class="page-number" href="/page/3/">3</a><a class="extend next" rel="next" href="/page/2/"><i class="fa fa-angle-right" aria-label="Next page"></i></a>
+    <a class="extend prev" rel="prev" href="/page/2/"><i class="fa fa-angle-left" aria-label="Previous page"></i></a><a class="page-number" href="/">1</a><a class="page-number" href="/page/2/">2</a><span class="page-number current">3</span>
   </nav>
 
 

@@ -1,0 +1,1349 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="en">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+  
+  
+    
+    
+  <script src="/lib/pace/pace.min.js?v=1.0.2"></script>
+  <link href="/lib/pace/pace-theme-big-counter.min.css?v=1.0.2" rel="stylesheet">
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=6.1.0" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=6.1.0">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=6.1.0">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=6.1.0">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=6.1.0" color="#222">
+
+
+
+
+
+
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Gemini',
+    version: '6.1.0',
+    sidebar: {"position":"left","display":"post","offset":48,"b2t":true,"scrollpercent":true,"onmobile":false},
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="标题要唬人…在做Golang跨平台的时候，使用gomobile bind -target&#x3D;ios xxx 就可以生成对应平台的framework。  本文讨论的内容是Golang是如何实现了OC和Go的数据通讯与接口调用，以及如何做到让开发者无感知的从OC对象的引用计数切换到Golang的垃圾回收机制。 其实Go的语言层面的通讯实际上是由bind生成的中间层的代码来实现的，什么是中间层">
+<meta property="og:type" content="article">
+<meta property="og:title" content="解析GoMobile生成的&quot;胶水代码&quot;">
+<meta property="og:url" content="https://blog.spade-ace.tech/2020/04/01/14.gomobile-bind/index.html">
+<meta property="og:site_name" content="Spade-Ace">
+<meta property="og:description" content="标题要唬人…在做Golang跨平台的时候，使用gomobile bind -target&#x3D;ios xxx 就可以生成对应平台的framework。  本文讨论的内容是Golang是如何实现了OC和Go的数据通讯与接口调用，以及如何做到让开发者无感知的从OC对象的引用计数切换到Golang的垃圾回收机制。 其实Go的语言层面的通讯实际上是由bind生成的中间层的代码来实现的，什么是中间层">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2020/03/d4bb5b927cdeb09f7ba32e3925bfb1c4.png">
+<meta property="article:published_time" content="2020-03-31T16:00:00.000Z">
+<meta property="article:modified_time" content="2020-08-29T14:42:58.496Z">
+<meta property="article:author" content="Caio">
+<meta property="article:tag" content="GoMobile">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2020/03/d4bb5b927cdeb09f7ba32e3925bfb1c4.png">
+
+
+
+
+
+
+  <link rel="canonical" href="https://blog.spade-ace.tech/2020/04/01/14.gomobile-bind/"/>
+
+
+
+<script type="text/javascript" id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>解析GoMobile生成的"胶水代码" | Spade-Ace</title>
+  
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style type="text/css">
+    .use-motion .motion-element,
+    .use-motion .brand,
+    .use-motion .menu-item,
+    .sidebar-inner,
+    .use-motion .post-block,
+    .use-motion .pagination,
+    .use-motion .comments,
+    .use-motion .post-header,
+    .use-motion .post-body,
+    .use-motion .collection-title { opacity: initial; }
+
+    .use-motion .logo,
+    .use-motion .site-title,
+    .use-motion .site-subtitle {
+      opacity: initial;
+      top: initial;
+    }
+
+    .use-motion {
+      .logo-line-before i { left: initial; }
+      .logo-line-after i { right: initial; }
+    }
+  </style>
+</noscript>
+
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"> 
+
+<div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Spade-Ace</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">iOS Developer - Caio</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="Toggle navigation bar">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+          
+  <li class="menu-item menu-item-home">
+    <a href="/" rel="section">
+      <i class="menu-item-icon fa fa-fw fa-home"></i> <br />Home</a>
+</li>
+
+      
+        
+        
+          
+  <li class="menu-item menu-item-archives">
+    <a href="/archives/" rel="section">
+      <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />Archives<span class="badge">23</span>
+      </a>
+</li>
+
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />Search</a>
+        </li>
+      
+    </ul>
+  
+
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off"
+             placeholder="Searching..." spellcheck="false"
+             type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+  
+
+
+
+ </div>
+    </header>
+
+    
+  
+  
+  
+    
+      
+    
+    <a href="https://github.com/caio-x" class="github-corner" target="_blank" title="Follow me on GitHub" aria-label="Follow me on GitHub"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#222; color:#fff; position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg>
+    
+      </a>
+    
+
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+    <div class="reading-progress-bar"></div>
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2020/04/01/14.gomobile-bind/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/timg.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Spade-Ace">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">解析GoMobile生成的"胶水代码"</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-01T00:00:00+08:00">2020-04-01</time>
+            
+
+            
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/GoMobile/" itemprop="url" rel="index"><span itemprop="name">GoMobile</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>标题要唬人…在做Golang跨平台的时候，使用gomobile bind -target&#x3D;ios xxx 就可以生成对应平台的framework。</p>
+</blockquote>
+<p>本文讨论的内容是Golang是如何实现了OC和Go的数据通讯与接口调用，以及如何做到让开发者无感知的从OC对象的引用计数切换到Golang的垃圾回收机制。</p>
+<p>其实Go的语言层面的通讯实际上是由bind生成的中间层的代码来实现的，什么是中间层的代码？我们简单做实验…</p>
+<span id="more"></span>
+
+<p>写一个Go的例子，以下所有方法就是我们本文需要讨论的所有内容了</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line">package g_mb_test</span><br><span class="line"></span><br><span class="line">type GMBInterface interface &#123;</span><br><span class="line">	InterfaceTest()</span><br><span class="line">&#125;</span><br><span class="line">type GMBTest struct &#123;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func (t *GMBTest) GMBTestOne(value int32) &#123;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func (t *GMBTest) GMBTestSecond(data []byte, str string) &#123;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func (t *GMBTest) GMBTest3() string &#123;</span><br><span class="line">    return “”</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func (t *GMBTest) GMBTest4() []byte &#123;</span><br><span class="line">    return nil</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func (t *GMBTest) GMBTest5() GMBInterface &#123;</span><br><span class="line">    return nil</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func (t *GMBTest) GMBTest6() *GMBTest &#123;</span><br><span class="line">    return nil</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func (t *GMBTest) GMBTest7(i GMBInterface) &#123;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ol>
+<li>Go 导出的对象在OC中是怎么获取到的？</li>
+<li>OC是怎么调用Golang的对象方法的？</li>
+<li>OC是怎么传递给Golang参数的？不同的类型是否一样（NSData -&gt; []byte, NSString -&gt; string, interface(OC) -&gt; interface）？</li>
+<li>OC传递给Golang 的参数Golang怎么释放（或者OC怎么释放）？</li>
+<li>相反Golang是怎么返回值的？不同的类型是否一样（[]byte -&gt; NSData, string -&gt; NSString, interface -&gt; interface(OC)）?</li>
+<li>Golang 如果返回的是一个被导出的类型，又是什么样的？</li>
+</ol>
+<p>首先Golang本身是由C来实现的，所以Golang可以”无压力”和C进行双向通讯(cgo)。其次，OC的本质其实也是C，OC也是可以和C无缝进行双向通讯。在这两个条件下我们可以假想，OC和Golang 的双向通讯是不是也可以用C？</p>
+<p>实验开始，我们使用命令行<code>gomobile bind -target=ios/amd64 -work Caio/g_mb_test</code>来保留工作目录。</p>
+<p>找到控制台输出的临时目录，生成了如下的结构。go-buildxxx下是生成的中间产物。而src下就是gomobile自动生成的中间代码。<br><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2020/03/d4bb5b927cdeb09f7ba32e3925bfb1c4.png"></p>
+<h3 id="先从对象的初始化开始…"><a href="#先从对象的初始化开始…" class="headerlink" title="先从对象的初始化开始…"></a>先从对象的初始化开始…</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">- (instancetype)init &#123;</span><br><span class="line">    self = [super init];</span><br><span class="line">    if (self) &#123;</span><br><span class="line">        __ref = go_seq_from_refnum(new_g_mb_test_GMBTest());</span><br><span class="line">    &#125;</span><br><span class="line">    return self;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>new_g_mb_test_GMBTest 实际是由 go在静态库中实现的方法，可以从g_mb_test-amd64.h头文件中找到它的声明。对应了src中的go_g_mb_testmain.go文件中的new_g_mb_test_GMBTest()方法。这个go文件是gomobile在编译go之前自动生成的代码。</p>
+<p>可以理解为在iOS中引入了一个”静态 framework”，这个静态库实现了new_g_mb_test_GMBTest()。只不过这个framework是由Go语言实现的。</p>
+<p>可以看到 new_g_mb_test_GMBTest()返回了一个 int32值，而这个值最后传递给了go_seq_from_refnum()，这个方法是在seq_darwin.m中。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">GoSeqRef *go_seq_from_refnum(int32_t refnum) &#123;</span><br><span class="line">  if (refnum == NULL_REFNUM) &#123;</span><br><span class="line">    return nil;</span><br><span class="line">  &#125;</span><br><span class="line">  if (IS_FROM_GO(refnum)) &#123;</span><br><span class="line">    return [[GoSeqRef alloc] initWithRefnum:refnum obj:NULL];</span><br><span class="line">  &#125;</span><br><span class="line">  return [[GoSeqRef alloc] initWithRefnum:refnum obj:go_seq_objc_from_refnum(refnum)];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>通过”字面”意思看，是返回了一个GoSeqRef，通过IS_FROM_GO判断传入的refnum（也就是上面提到的new_g_mb_test_GMBTest()返回的值是不是Go生成的），来决定GoSeqRef中的obj是否为NULL。如果不是Go生成的那么就返回go_seq_objc_from_refnum()转换refnum为obj，这个分支我们之后再讲。</p>
+<p>那么我们看看这个所谓的”静态库”是怎么生成这个int32值的。<br><em>注：以下运行的代码已经在Go中了</em></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">*go_g_mb_testmain.go*</span><br><span class="line">//export new_g_mb_test_GMBTest</span><br><span class="line">func new_g_mb_test_GMBTest() C.int32_t &#123;</span><br><span class="line">    return C.int32_t(_seq.ToRefNum(new(g_mb_test.GMBTest)))</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>可以看到 new_g_mb_test_GMBTest()返回了一个 int32，而这个int32值还是由_seq.ToRefNum()方法返回的。这个方法是由golang.org&#x2F;x&#x2F;mobile&#x2F;bind&#x2F;seq&#x2F;ref.go 下的bind提供的。方法参数就是一个go struct对象。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line">*golang.org/x/mobile/bind/seq/ref.go*</span><br><span class="line">// ToRefNum increments the reference count for an object and</span><br><span class="line">// returns its refnum.</span><br><span class="line">func ToRefNum(obj interface&#123;&#125;) int32 &#123;</span><br><span class="line">    // We don’t track foreign objects, so if obj is a proxy</span><br><span class="line">    // return its refnum.</span><br><span class="line">    if r, ok := obj.(proxy); ok &#123;</span><br><span class="line">        refnum := r.Bind_proxy_refnum__()</span><br><span class="line">        if refnum &lt;= 0 &#123;</span><br><span class="line">            panic(fmt.Errorf(&quot;seq: proxy contained invalid Go refnum: %d&quot;, refnum))</span><br><span class="line">        &#125;</span><br><span class="line">        return refnum</span><br><span class="line">    &#125;</span><br><span class="line">    refs.Lock()</span><br><span class="line">    num := refs.refs[obj]</span><br><span class="line">    if num != 0 &#123;</span><br><span class="line">        s := refs.objs[num]</span><br><span class="line">        refs.objs[num] = countedObj&#123;s.obj, s.cnt + 1&#125;</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">        num = refs.next</span><br><span class="line">        refs.next--</span><br><span class="line">        if refs.next &gt; 0 &#123;</span><br><span class="line">            panic(“refs.next underflow”)</span><br><span class="line">        &#125;</span><br><span class="line">        refs.refs[obj] = num</span><br><span class="line">        refs.objs[num] = countedObj&#123;obj, 1&#125;</span><br><span class="line">    &#125;</span><br><span class="line">    refs.Unlock()</span><br><span class="line"></span><br><span class="line">    return int32(num)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>关于proxy那块的代码，我们稍等之后再看。后面的代码也不急着读，先看后面提到的refs对象：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">// refs stores Go objects that have been passed to another language.</span><br><span class="line">var refs struct &#123;</span><br><span class="line">    sync.Mutex</span><br><span class="line">    next int32 // next reference number to use for Go object, always negative</span><br><span class="line">    refs map[interface&#123;&#125;]int32</span><br><span class="line">    objs map[int32]countedObj</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>注释写的很明确了，refs存储了从Golang传递给其他语言的对象。</p>
+<p>结构体中有两个map成员变量，一个是refs，一个是objs。refs的key是对象，value就是上面提到的refnum，objs的key是refnum，value是这个Go对象的引用计数对象。还有一个变量是next，next是下一个Go对象的refnum，而且永远是负数。</p>
+<p>那么上面的后半段代码也就很容易看懂了。从ref取出obj对应的num，计数加一。如果没有的话，next-1作为下一个refnum，把对象存进map。</p>
+<p><strong>所以：</strong></p>
+<ol>
+<li>在Go中有一个全局变量，维护了所有外部正在使用的Go对象。</li>
+<li>从Go生成的对象，想要被外部使用，都是通过一个refnum的值在这个全局变量中索引的。</li>
+<li>并且还维护了一个引用计数，每次取这个对象都会+1。</li>
+<li>另外，从Go导出的refnum都是负数。</li>
+</ol>
+<p>到这里，我们其实可以小<em>总结</em>一下了：<br>从上面的代码可以知道 Go中的对象在 oc 中的体现是:</p>
+<p>OC对象持有一个GoSeqRef，GoSeqRef 持有一个 refnum，refnum在Go中的refs的objs和refs中存储了真正的Go对象和引用计数值。</p>
+<h4 id="再看一个OC方法的基本调用"><a href="#再看一个OC方法的基本调用" class="headerlink" title="再看一个OC方法的基本调用"></a>再看一个OC方法的基本调用</h4><p>既然已经生成Golang的对象了，我们看一下 gmbTestOne 这个基本调用。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">- (void)gmbTestOne:(int32_t)value &#123;</span><br><span class="line">    int32_t refnum = go_seq_go_to_refnum(self._ref);</span><br><span class="line">    int32_t _value = (int32_t)value;</span><br><span class="line">    proxyg_mb_test_GMBTest_GMBTestOne(refnum, _value);</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>go_seq_go_to_refnum()是在Seq_darwin.m中实现的。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">- (int32_t)incNum &#123;</span><br><span class="line">  IncGoRef(_refnum);</span><br><span class="line">  return _refnum;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>可以看到最终是返回了_refnum。但是在此之前，还有一个IncGoRef(_refnum);<br>可以看ref.go的实现，方法实现是增加Go对象的引用计数。<br><em>思考：</em>从OC ARC的对象回收的角度来看，似乎”言之有理”。”int32_t refnum “虽然是个int，但是得要持有这个对象，不然会有可能在调用过程中被释放。那么猜想一样，它会在方法域结束的时候释放？我们接着看…</p>
+<p>然后和上面的逻辑一样，proxyg_mb_test_GMBTest_GMBTestOne() 是framework实现的方法，第一个参数是refnum，第二个参数是value的值。</p>
+<p>猜想它的实现应该是，通过 refnum找到Go中的对象，然后调用对应的方法。我们来看Go的实现：<br><em>注：以下运行的代码已经在Go中了</em></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">//export proxyg_mb_test_GMBTest_GMBTestOne</span><br><span class="line">func proxyg_mb_test_GMBTest_GMBTestOne(refnum C.int32_t, param_value C.int32_t) &#123;</span><br><span class="line">    ref := _seq.FromRefNum(int32(refnum))</span><br><span class="line">    v := ref.Get().(*g_mb_test.GMBTest)</span><br><span class="line">    _param_value := int32(param_value)</span><br><span class="line">    v.GMBTestOne(_param_value)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">// FromRefNum returns the Ref for a refnum. If the refnum specifies a</span><br><span class="line">// foreign object, a finalizer is set to track its lifetime.</span><br><span class="line">func FromRefNum(num int32) *Ref &#123;</span><br><span class="line">    if num == NullRefNum &#123;</span><br><span class="line">        return nil</span><br><span class="line">    &#125;</span><br><span class="line">    ref := &amp;Ref&#123;num&#125;</span><br><span class="line">    if num &gt; 0 &#123;</span><br><span class="line">        // This is a foreign object reference.</span><br><span class="line">        // Track its lifetime with a finalizer.</span><br><span class="line">        runtime.SetFinalizer(ref, FinalizeRef)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    return ref</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>和OC中一样，在Go中也有一个Ref对象，这个对象包裹的就是一个refnum。<br>num &gt; 0是指代外部传入的对象，我们先不看</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">// Get returns the underlying object.</span><br><span class="line">func (r *Ref) Get() interface&#123;&#125; &#123;</span><br><span class="line">    refnum := r.Bind_Num</span><br><span class="line">    refs.Lock()</span><br><span class="line">    o, ok := refs.objs[refnum]</span><br><span class="line">    refs.Unlock()</span><br><span class="line">    if !ok &#123;</span><br><span class="line">        panic(fmt.Sprintf(“unknown ref %d”, refnum))</span><br><span class="line">    &#125;</span><br><span class="line">    // This is a Go reference and its refnum was incremented</span><br><span class="line">    // before crossing the language barrier.</span><br><span class="line">    Delete(refnum)</span><br><span class="line">    return o.obj</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>前半段印证了我们的猜想，取出对象并且返回。Delete的实现是引用计数-1，如果到0了，那就从map中删除。</p>
+<p><em>印证我们上面思考中的猜想！</em>Golang对象并不是在结束的时候才释放，在Golang中 v :&#x3D; ref.Get().(*g_mb_test.GMBTest) 已经持有，其实不必再持有了，等Golang的方法结束的时候自然会通过Golang的垃圾回收释放。</p>
+<p>最后代码就是一个Go的方法调用了，把int参数传入。</p>
+<p><strong>总结一下：</strong><br>OC调用Golang的方法，实际是，在OC中调用方法的时候，先用self.ref 获取 refnum。这个步骤会增加Go中对象的引用计数。然后调入Go的方法，把refnum传入，取出Golang对象，减小引用计数。然后调用具体实现的方法。</p>
+<h4 id="Golang返回对象"><a href="#Golang返回对象" class="headerlink" title="Golang返回对象"></a>Golang返回对象</h4><p>Golang的方法返回对象其实和上面的初始化方法大同小异，只是结合了基本方法调用。注：Go返回的对象类型必须是Go导出的类型，非Go导出的类型Go不识别或者OC不识别（除了NSData，NSString等基本类型）。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">- (G_mb_testGMBTest*)gmbTest6 &#123;</span><br><span class="line">    int32_t refnum = go_seq_go_to_refnum(self._ref);</span><br><span class="line">    int32_t r0 = proxyg_mb_test_GMBTest_GMBTest6(refnum);</span><br><span class="line">    G_mb_testGMBTest* _ret0_ = nil;</span><br><span class="line">    GoSeqRef* _ret0__ref = go_seq_from_refnum(r0);</span><br><span class="line">    if (_ret0__ref != NULL) &#123;</span><br><span class="line">        _ret0_ = _ret0__ref.obj;</span><br><span class="line">        if (_ret0_ == nil) &#123;</span><br><span class="line">            _ret0_ = [[G_mb_testGMBTest alloc] initWithRef:_ret0__ref];</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    return _ret0_;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>proxyg_mb_test_GMBTest_GMBTest6()方法返回了一个int值，这个值必然是对应的Golang的对象。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">//export proxyg_mb_test_GMBTest_GMBTest6</span><br><span class="line">func proxyg_mb_test_GMBTest_GMBTest6(refnum C.int32_t) C.int32_t &#123;</span><br><span class="line">    ref := _seq.FromRefNum(int32(refnum))</span><br><span class="line">    v := ref.Get().(*g_mb_test.GMBTest)</span><br><span class="line">    res_0 := v.GMBTest6()</span><br><span class="line">    var _res_0 C.int32_t = _seq.NullRefNum</span><br><span class="line">    if res_0 != nil &#123;</span><br><span class="line">        _res_0 = C.int32_t(_seq.ToRefNum(res_0))</span><br><span class="line">    &#125;</span><br><span class="line">    return _res_0</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>方法调用的地方我们不再详述，返回的res_0如果是nil，则会返回_seq.NullRefNum &#x3D; 41。即用一个特定的值来表示null。<br>返回后OC同样的会在go_seq_from_refnum()中判断41这个值。</p>
+<p><strong>总结一下：</strong><br>Go返回对象实际是返回一个refnum值，OC使用GoSeqRef来存储这个值。（返回的对象始终是Go已导出的对象类型）</p>
+<h4 id="Golang返回接口类型"><a href="#Golang返回接口类型" class="headerlink" title="Golang返回接口类型"></a>Golang返回接口类型</h4><p>实际上Go和其他语言通讯大部分都会使用接口类型</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">- (id&lt;G_mb_testGMBInterface&gt;)gmbTest5 &#123;</span><br><span class="line">    int32_t refnum = go_seq_go_to_refnum(self._ref);</span><br><span class="line">    int32_t r0 = proxyg_mb_test_GMBTest_GMBTest5(refnum);</span><br><span class="line">    G_mb_testGMBInterface* _ret0_ = nil;</span><br><span class="line">    GoSeqRef* _ret0__ref = go_seq_from_refnum(r0);</span><br><span class="line">    if (_ret0__ref != NULL) &#123;</span><br><span class="line">        _ret0_ = _ret0__ref.obj;</span><br><span class="line">        if (_ret0_ == nil) &#123;</span><br><span class="line">            _ret0_ = [[G_mb_testGMBInterface alloc] initWithRef:_ret0__ref];</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    return _ret0_;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>proxyg_mb_test_GMBTest_GMBTest5()和上面的proxyg_mb_test_GMBTest_GMBTest6()返回对象没有什么差别，主要差别在于处理返回的值变成go中的refnum。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">@implementation G_mb_testGMBInterface &#123;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (instancetype)initWithRef:(id)ref &#123;</span><br><span class="line">    self = [super init];</span><br><span class="line">    if (self) &#123; __ref = ref; &#125;</span><br><span class="line">    return self;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (void)interfaceTest &#123;</span><br><span class="line">    int32_t refnum = go_seq_go_to_refnum(self._ref);</span><br><span class="line">    proxyg_mb_test_GMBInterface_InterfaceTest(refnum);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">@end</span><br></pre></td></tr></table></figure>
+
+<p>在g_mb_test_darwin.m中自动生成了一个G_mb_testGMBInterface类，而这个类实现了G_mb_testGMBInterface，也就是我们定义的接口，并且存储了GO返回的refnum。而接口的实现内调用了proxyg_mb_test_GMBInterface_InterfaceTest()函数。这个函数实际就是通过返回的refnum来获取Go中的对象，调用Go中实现的接口。</p>
+<p><strong>总结：</strong><br>Go返回的接口类型，在OC上还是一个refnum。胶水代码自动生成了一个实现这个接口的类，并且保存了这个GoSeqRef。在调用接口的时候，实际上是调用的这个自动生成的类的方法。最终还是通过存储的GoSeqRef找到Go中的对象，来调用具体方法。</p>
+<p>至此，Go方法返回数据都已经讲完了（NSData和NSString我们放在单独的环节）。接下来我们看一下从OC传对象至Go</p>
+<h4 id="OC传递对象至Go"><a href="#OC传递对象至Go" class="headerlink" title="OC传递对象至Go"></a>OC传递对象至Go</h4><p>这一节我们将补充讲完之前跳过的环节。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">- (void)gmbTest7:(id&lt;G_mb_testGMBInterface&gt;)i &#123;</span><br><span class="line">    int32_t refnum = go_seq_go_to_refnum(self._ref);</span><br><span class="line">    int32_t _i;</span><br><span class="line">    if ([i conformsToProtocol:@protocol(goSeqRefInterface)]) &#123;</span><br><span class="line">        id&lt;goSeqRefInterface&gt; i_proxy = (id&lt;goSeqRefInterface&gt;)(i);</span><br><span class="line">        _i = go_seq_go_to_refnum(i_proxy._ref);</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">        _i = go_seq_to_refnum(i);</span><br><span class="line">    &#125;</span><br><span class="line">    proxyg_mb_test_GMBTest_GMBTest7(refnum, _i);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>goSeqRefInterface接口表示的是Go传出的对象（因为有GoSeqRef)。<br>如果是Go的对象，则增加引用计数。<br>如果不是Go的对象，即OC new出来的对象，调用go_seq_to_refnum()</p>
+<p>方法内部实际是调用的全局变量tracker。<br>看到这里其实已经明白了，在OC里实现了一个和Go中refs一样的结构。用来标识从OC传入Go的对象的引用计数。<br>Go在OC里的引用计数是，每次在调用Go对象之前持有一次，在Go由refnum找到对应对象之后，再释放一次。那么OC的对象呢？</p>
+<p>继续看到下一个方法proxyg_mb_test_GMBTest_GMBTest7()的参数传递。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">//export proxyg_mb_test_GMBTest_GMBTest7</span><br><span class="line">func proxyg_mb_test_GMBTest_GMBTest7(refnum C.int32_t, param_i C.int32_t) &#123;</span><br><span class="line">    ref := _seq.FromRefNum(int32(refnum))</span><br><span class="line">    v := ref.Get().(*g_mb_test.GMBTest)</span><br><span class="line">    var _param_i g_mb_test.GMBInterface</span><br><span class="line">    _param_i_ref := _seq.FromRefNum(int32(param_i))</span><br><span class="line">    if _param_i_ref != nil &#123;</span><br><span class="line">        if param_i &lt; 0 &#123; // go object</span><br><span class="line">            _param_i = _param_i_ref.Get().(g_mb_test.GMBInterface)</span><br><span class="line">        &#125; else &#123; // foreign object</span><br><span class="line">            _param_i = (*proxyg_mb_test_GMBInterface)(_param_i_ref)</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    v.GMBTest7(_param_i)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>之前提到过，_seq.FromRefNum只判断null（41），否则返回一个Ref指针。如果传入的参数是Go生成的，那么就直接使用。否则，如果是外部传入的，直接把_param_i_ref强转为了proxyg_mb_test_GMBInterface类型。</p>
+<p>看到后面还有一个对proxyg_mb_test_GMBInterface 的定义</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">type proxyg_mb_test_GMBInterface _seq.Ref</span><br><span class="line"></span><br><span class="line">func (p *proxyg_mb_test_GMBInterface) Bind_proxy_refnum__() int32 &#123; return (*_seq.Ref)(p).Bind_IncNum() &#125;</span><br><span class="line"></span><br><span class="line">func (p *proxyg_mb_test_GMBInterface) InterfaceTest() &#123;</span><br><span class="line">    C.cproxyg_mb_test_GMBInterface_InterfaceTest(C.int32_t(p.Bind_proxy_refnum__()))</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>两个方法：<br>Bind_proxy_refnum__()调用了Ref的Bind_IncNum(),看名字和注释的意思是增加外部变量的引用。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">func init() &#123;</span><br><span class="line">    _seq.FinalizeRef = func(ref *_seq.Ref) &#123;</span><br><span class="line">        refnum := ref.Bind_Num</span><br><span class="line">        if refnum &lt; 0 &#123;</span><br><span class="line">            panic(fmt.Sprintf(“not a foreign ref: %d”, refnum))</span><br><span class="line">        &#125;</span><br><span class="line">        C.go_seq_dec_ref(C.int32_t(refnum))</span><br><span class="line">    &#125;</span><br><span class="line">    _seq.IncForeignRef = func(refnum int32) &#123;</span><br><span class="line">        if refnum &lt; 0 &#123;</span><br><span class="line">            panic(fmt.Sprintf(&quot;not a foreign ref: %d&quot;, refnum))</span><br><span class="line">        &#125;</span><br><span class="line">        C.go_seq_inc_ref(C.int32_t(refnum))</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在初始化的时候，会给seq设置两个全局函数，一个是释放，另一个就是刚刚Bind_IncNum()函数内调用的_seq.IncForeignRef()，<br>C.cproxyg_mb_test_GMBInterface_InterfaceTest()，这个两个方法内实际调用了Cgo_seq_inc_ref()和C.go_seq_dec_ref(),这个是链接静态库的实现的符号。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">void go_seq_dec_ref(int32_t refnum) &#123;</span><br><span class="line">  @autoreleasepool &#123;</span><br><span class="line">    [tracker dec:refnum];</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">void go_seq_inc_ref(int32_t refnum) &#123;</span><br><span class="line">  @autoreleasepool &#123;</span><br><span class="line">    [tracker inc:refnum];</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>seq_darwin.m中可以看到，确实是增加和减少引用计数。</p>
+<p>在上面讲到FromRefNum的时候，如果是外部传入的对象，则会给GoRef设置一个析构函数。<br>也就是说，在GoRef这个结构体的生命周期内，持有外部的对象。GoRef 映射的就是外部对象。</p>
+<p>继续回到上面，InterfaceTest()是接口的另一个方法</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">void cproxyg_mb_test_GMBInterface_InterfaceTest(int32_t refnum) &#123;</span><br><span class="line">    @autoreleasepool &#123;</span><br><span class="line">        G_mb_testGMBInterface* o = go_seq_objc_from_refnum(refnum);</span><br><span class="line">        [o interfaceTest];</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>和_seq.FinalizeRef一样，调用到了oc。而OC的go_seq_objc_from_refnum（）方法在拿到oc对象之后，调用了[tracker dec:refnum];<br>这样，在OC层完成了这个对象的释放</p>
+<p><strong>总结：</strong><br>OC的接口对象传递至Go的时候（非Go导出对象），Go肯定也是以一个接口对象存在。OC在传入之前计数+1（计数为1），传入之后，Go对生成的GoRef增加析构函数，析构函数内对计数 -1。<br>在Go内调用GoRef重定义的接口函数时候，会先增加引用计数，调回OC之后，在OC取到对应的OC对象后，OC会主动对计数-1。这一点和Go传出对象很类似。</p>
+<p>另外，刚刚我们跳过了go_seq_from_refnum()以及ToRefNum()的代码，都是考虑的特殊情况。我们刚刚讨论的都是OC创建的对象传递至Go，Go创建的对象传递至OC。但是还有OC传递至Go后，Go在把同一个对象返回给OC。相反也有Go给OC后，OC把同一个对象给了Go。（这个同一个对象，在OC内是指GoSeqRef，在Go内是指GoRef，两侧都是镜像的。）对于这种情况，两侧都是不需要转换的，OC内直接从GoSeqRef取出obj调用，Go内直接找到refnum对应的对象调用。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><ol>
+<li>Go导出的静态库实际是一个C实现的静态库，还会生成OC的代码（胶水代码）来包裹这个库，以达到导出OC类、方法和接口</li>
+<li>Go的对象和OC对象在对方侧，都一个int32(refnum)作为对象参数，来对应每一个传递过去的对象。如果refnum&gt;0表示OC对象，&lt;0表示Go对象。</li>
+<li>Go的对象和OC对象在对方侧，分别有一个存储了refnum的GoRef struct和GoSeqRef class来表示对方侧的对象。</li>
+<li>Go和OC侧都有全局变量来维护已经传入至对方侧的对象，以及引用计数。</li>
+<li>不论是OC还是Go，如果refnum表示的是本侧的对象，那么就直接从全局变量中取出对象使用。</li>
+<li>OC调用Go对象方法，实际是调用Go的C函数，通过传递refnum告知Go具体的Go对象。</li>
+<li>Go调用OC对象方法，实际是通过声明式，调用C函数，由.m实现。同理通过传递refnum来告知OC具体的OC对象。</li>
+<li>OC调用Go的接口对象，实际是生成了实现接口的类的胶水代码，接口对象持有了GoSeqRef，接口方法实际也是通过传递refnum调用Go</li>
+<li>Go调用OC的接口对象，实际是通过声明式，调用C函数，由.m实现。通过重定义GoRef，实现OC的接口方法。接口方法内通过传递refnum调用.m即OC</li>
+<li>Go传递至OC的对象，Go在new或者函数返回之前会调用_seq.ToRefNum()，存储在全局变量中，并计数为1。OC存储的GoSeqRef在dealloc的时候通过DestroyRef()将计数-1。</li>
+<li>OC传递至Go的对象，OC在传递给Go之前会调用assignRefnumAndIncRefcount:存储在全局变量中，并计数为1。Go在生成GoRef的时候会设置该对象的析构回调，在回调内，通过调用go_seq_dec_ref()将计数-1</li>
+<li>Go对象方法被OC调用之前，OC会使用go_seq_go_to_refnum()将计数+1，Go在将refnum转换为go obj之后，又会将计数-1</li>
+<li>OC对象方法被Go调用之前，Go会使用Bind_IncNum()将计数+1，OC在将refnum转换为oc obj 之后，又会将计数-1。</li>
+</ol>
+<p>以上的总结已经完全可以解答文章开始时候的提问了。</p>
+<p>&#x2F;&#x2F;最后这里回头补充一个图解</p>
+<h2 id="后记"><a href="#后记" class="headerlink" title="后记"></a>后记</h2><p>还有两个特殊的地方 NSString 和 NSData。这两个对象在Go &lt;—&gt; OC gomobile 是默认支持这两种数据类型的互转的。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">typedef struct nstring &#123;</span><br><span class="line">  void *ptr;</span><br><span class="line">  int len;</span><br><span class="line">&#125; nstring;</span><br><span class="line"></span><br><span class="line">typedef struct nbyteslice &#123;</span><br><span class="line">  void *ptr;</span><br><span class="line">  int len;</span><br><span class="line">&#125; nbyteslice;</span><br><span class="line">typedef int nint;</span><br></pre></td></tr></table></figure>
+<p>这两个数据类型在传递的时候，都会被转换为定义好的C语言的struct类型。</p>
+<h3 id="String"><a href="#String" class="headerlink" title="String"></a>String</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">// encodeString copies a Go string and returns it as a nstring.</span><br><span class="line">func encodeString(s string) C.nstring &#123;</span><br><span class="line">    n := C.int(len(s))</span><br><span class="line">    if n == 0 &#123;</span><br><span class="line">        return C.nstring&#123;&#125;</span><br><span class="line">    &#125;</span><br><span class="line">    ptr := C.malloc(C.size_t(n))</span><br><span class="line">    if ptr == nil &#123;</span><br><span class="line">        panic(&quot;encodeString: malloc failed&quot;)</span><br><span class="line">    &#125;</span><br><span class="line">    copy((*[1&lt;&lt;31 - 1]byte)(ptr)[:n], s)</span><br><span class="line">    return C.nstring&#123;ptr: ptr, len: n&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">// decodeString converts a nstring to a Go string. The</span><br><span class="line">// data in str is freed after use.</span><br><span class="line">func decodeString(str C.nstring) string &#123;</span><br><span class="line">    if str.ptr == nil &#123;</span><br><span class="line">        return &quot;&quot;</span><br><span class="line">    &#125;</span><br><span class="line">    s := C.GoStringN((*C.char)(str.ptr), str.len)</span><br><span class="line">    C.free(str.ptr)</span><br><span class="line">    return s</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>Go 侧 string 通过encode和decode方法，在cstring和go string之间互转，<em>每次转换都会copy</em>。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line">NSString *go_seq_to_objc_string(nstring str) &#123;</span><br><span class="line">  if (str.len == 0) &#123;  // empty string.</span><br><span class="line">    return @“”;</span><br><span class="line">  &#125;</span><br><span class="line">  NSString * res = [[NSString alloc] initWithBytesNoCopy:str.ptr</span><br><span class="line">                                                  length:str.len</span><br><span class="line">                                                encoding:NSUTF8StringEncoding</span><br><span class="line">                                            freeWhenDone:YES];</span><br><span class="line">  return res;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">nstring go_seq_from_objc_string(NSString *s) &#123;</span><br><span class="line">  nstring res = &#123;NULL, 0&#125;;</span><br><span class="line">  int len = [s lengthOfBytesUsingEncoding:NSUTF8StringEncoding];</span><br><span class="line"></span><br><span class="line">  if (len == 0) &#123;</span><br><span class="line">    if (s.length &gt; 0) &#123;</span><br><span class="line">      LOG_INFO(@“unable to encode an NSString into UTF-8”);</span><br><span class="line">    &#125;</span><br><span class="line">    return res;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  char *buf = (char *)malloc(len);</span><br><span class="line">  if (buf == NULL) &#123;</span><br><span class="line">    LOG_FATAL(@&quot;malloc failed&quot;);</span><br><span class="line">  &#125;</span><br><span class="line">  NSUInteger used;</span><br><span class="line">  [s getBytes:buf</span><br><span class="line">           maxLength:len</span><br><span class="line">          usedLength:&amp;used</span><br><span class="line">            encoding:NSUTF8StringEncoding</span><br><span class="line">             options:0</span><br><span class="line">               range:NSMakeRange(0, [s length])</span><br><span class="line">      remainingRange:NULL];</span><br><span class="line">  res.ptr = buf;</span><br><span class="line">  res.len = used;</span><br><span class="line">  return res;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>OC 侧 NSString 通过go_seq_to_objc_string和go_seq_from_objc_string方法，在cstring和nsstring之间互转，<em>每次转换都会copy</em>。</p>
+<p>且对方侧生成的cstring由己方释放。</p>
+<h3 id="Bytes"><a href="#Bytes" class="headerlink" title="Bytes"></a>Bytes</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">// fromSlice converts a slice to a nbyteslice.</span><br><span class="line">// If cpy is set, a malloc’ed copy of the data is returned.</span><br><span class="line">func fromSlice(s []byte, cpy bool) C.nbyteslice &#123;</span><br><span class="line">    if s == nil || len(s) == 0 &#123;</span><br><span class="line">        return C.nbyteslice&#123;&#125;</span><br><span class="line">    &#125;</span><br><span class="line">    ptr, n := unsafe.Pointer(&amp;s[0]), C.int(len(s))</span><br><span class="line">    if cpy &#123;</span><br><span class="line">        nptr := C.malloc(C.size_t(n))</span><br><span class="line">        if nptr == nil &#123;</span><br><span class="line">            panic(&quot;fromSlice: malloc failed&quot;)</span><br><span class="line">        &#125;</span><br><span class="line">        copy((*[1&lt;&lt;31 - 1]byte)(nptr)[:n], (*[1&lt;&lt;31 - 1]byte)(ptr)[:n])</span><br><span class="line">        ptr = nptr</span><br><span class="line">    &#125;</span><br><span class="line">    return C.nbyteslice&#123;ptr: ptr, len: n&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">// toSlice takes a nbyteslice and returns a byte slice with the data. If cpy is</span><br><span class="line">// set, the slice contains a copy of the data. If not, the generated Go code</span><br><span class="line">// calls releaseByteSlice after use.</span><br><span class="line">func toSlice(s C.nbyteslice, cpy bool) []byte &#123;</span><br><span class="line">    if s.ptr == nil || s.len == 0 &#123;</span><br><span class="line">        return nil</span><br><span class="line">    &#125;</span><br><span class="line">    var b []byte</span><br><span class="line">    if cpy &#123;</span><br><span class="line">        b = C.GoBytes(s.ptr, C.int(s.len))</span><br><span class="line">        C.free(s.ptr)</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">        b = (*[1&lt;&lt;31 - 1]byte)(unsafe.Pointer(s.ptr))[:s.len:s.len]</span><br><span class="line">    &#125;</span><br><span class="line">    return b</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>Go 侧 nbyteslice 通过fromSlice和toSlice方法，在nbyteslice和go slice之间互转。</p>
+<p>OC -&gt; Go 如果对方（OC）copy &#x3D;&#x3D; true，Go也会拷贝，拷贝完就会释放nbyteslice，否则只是使用。<br>Go -&gt; OC  (copy 才会拷贝，go-&gt;OC copy&#x3D;true)。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line">NSData *go_seq_to_objc_bytearray(nbyteslice s, int copy) &#123;</span><br><span class="line">  if (s.ptr == NULL) &#123;</span><br><span class="line">    return NULL;</span><br><span class="line">  &#125;</span><br><span class="line">  BOOL freeWhenDone = copy ? YES : NO;</span><br><span class="line">  return [NSData dataWithBytesNoCopy:s.ptr length:s.len freeWhenDone:freeWhenDone];</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">nbyteslice go_seq_from_objc_bytearray(NSData *data, int copy) &#123;</span><br><span class="line">  struct nbyteslice res = &#123;NULL, 0&#125;;</span><br><span class="line">  int sz = data.length;</span><br><span class="line">  if (sz == 0) &#123;</span><br><span class="line">    return res;</span><br><span class="line">  &#125;</span><br><span class="line">  void *ptr;</span><br><span class="line">  // If the argument was not a NSMutableData, copy the data so that</span><br><span class="line">  // the NSData is not changed from Go. The corresponding free is called</span><br><span class="line">  // by releaseByteSlice.</span><br><span class="line">  if (copy || ![data isKindOfClass:[NSMutableData class]]) &#123;</span><br><span class="line">    void *arr_copy = malloc(sz);</span><br><span class="line">    if (arr_copy == NULL) &#123;</span><br><span class="line">      LOG_FATAL(@&quot;malloc failed&quot;);</span><br><span class="line">    &#125;</span><br><span class="line">    memcpy(arr_copy, [data bytes], sz);</span><br><span class="line">    ptr = arr_copy;</span><br><span class="line">  &#125; else &#123;</span><br><span class="line">    ptr = (void *)[data bytes];</span><br><span class="line">  &#125;</span><br><span class="line">  res.ptr = ptr;</span><br><span class="line">  res.len = sz;</span><br><span class="line">  return res;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>OC 侧 NSData 通过go_seq_to_objc_bytearray和go_seq_from_objc_bytearray方法，在nbyteslice和NSData之间互转。</p>
+<p>OC -&gt; Go (NSMutableData &amp;&amp; !copy 才不会拷贝，OC-&gt;Go copy &#x3D; false，即NSData拷贝，NSMutableData不拷贝)，<em>并且方法调用结束就会释放bytes</em>。（如果在Go内使用slice的时候切协程了，有大概率读取到的bytes是被释放了）<br>Go -&gt; OC  OC不拷贝从Go返回的bytes，OC在释放NSData的时候会释放nbyteslice.</p>
+<p><em>总之一个宗旨，一侧指定了copy，就由另一侧释放。没有指定copy，就由本侧释放，即谁创建谁释放的原则。（NSData是指定了false，但是执行拷贝了，还是由本侧释放）</em></p>
+<hr>
+<p>2020-3-18 记<br><a target="_blank" rel="noopener" href="http://yulingtianxia.com/blog/2019/10/27/Write-Objective-C-Code-using-Dart/">用 Dart 来写 Objective-C 代码</a></p>
+<p>这篇文章讲述的是在Dart中写OC，与GoMobile的原理相比有些许相似…</p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/GoMobile/" rel="tag"># GoMobile</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/03/18/13.sqlite-os-shm/" rel="next" title="SQLite--OS【共享内存】">
+                <i class="fa fa-chevron-left"></i> SQLite--OS【共享内存】
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/04/19/15.Sqlite-OS/" rel="prev" title="SQLite--OS">
+                SQLite--OS <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/timg.gif"
+                alt="" />
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/%7C%7Carchive">
+                
+                    <span class="site-state-item-count">23</span>
+                    <span class="site-state-item-name">posts</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">6</span>
+                    <span class="site-state-item-name">categories</span>
+                  
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-tags">
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">tags</span>
+                  
+                </div>
+              
+            </nav>
+          
+
+          
+
+          
+            <div class="links-of-author motion-element">
+              
+                <span class="links-of-author-item">
+                  <a href="https://github.com/caio-x" target="_blank" title="GitHub"><i class="fa fa-fw fa-github"></i>GitHub</a>
+                  
+                </span>
+              
+                <span class="links-of-author-item">
+                  <a href="mailto:omblcky@gmail.com" target="_blank" title="E-Mail"><i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                  
+                </span>
+              
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%85%88%E4%BB%8E%E5%AF%B9%E8%B1%A1%E7%9A%84%E5%88%9D%E5%A7%8B%E5%8C%96%E5%BC%80%E5%A7%8B%E2%80%A6"><span class="nav-number">1.</span> <span class="nav-text">先从对象的初始化开始…</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%86%8D%E7%9C%8B%E4%B8%80%E4%B8%AAOC%E6%96%B9%E6%B3%95%E7%9A%84%E5%9F%BA%E6%9C%AC%E8%B0%83%E7%94%A8"><span class="nav-number">1.1.</span> <span class="nav-text">再看一个OC方法的基本调用</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Golang%E8%BF%94%E5%9B%9E%E5%AF%B9%E8%B1%A1"><span class="nav-number">1.2.</span> <span class="nav-text">Golang返回对象</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Golang%E8%BF%94%E5%9B%9E%E6%8E%A5%E5%8F%A3%E7%B1%BB%E5%9E%8B"><span class="nav-number">1.3.</span> <span class="nav-text">Golang返回接口类型</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#OC%E4%BC%A0%E9%80%92%E5%AF%B9%E8%B1%A1%E8%87%B3Go"><span class="nav-number">1.4.</span> <span class="nav-text">OC传递对象至Go</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number"></span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%90%8E%E8%AE%B0"><span class="nav-number"></span> <span class="nav-text">后记</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#String"><span class="nav-number">1.</span> <span class="nav-text">String</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Bytes"><span class="nav-number">2.</span> <span class="nav-text">Bytes</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+        <div class="back-to-top">
+          <i class="fa fa-arrow-up"></i>
+          
+            <span id="scrollpercent"><span>0</span>%</span>
+          
+        </div>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; 2019 &mdash; <span itemprop="copyrightYear">2022</span>
+  <span class="with-love" id="animate"> 
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Caio</span>
+
+  
+
+  
+</div>
+
+
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/theme-next/hexo-theme-next">NexT.Gemini</a> v6.1.0</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="//cdn.jsdelivr.net/gh/theme-next/theme-next-reading-progress@1/reading_progress.min.js"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=6.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=6.1.0"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=6.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=6.1.0"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=6.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=6.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=6.1.0"></script>
+
+
+
+  
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
+</html>
