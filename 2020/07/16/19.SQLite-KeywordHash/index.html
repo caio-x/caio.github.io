@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-CH">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 6.2.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/spade-logo-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/spade-logo-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/spade-logo-next.png">
+  <link rel="mask-icon" href="/images/spade-logo-next.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.1.1/css/all.min.css" integrity="sha256-DfWjNxDkM94fVBWx1H5BMMp0Zq7luBlV8QRcSES7s+0=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pace-js@1.2.4/themes/blue/pace-theme-big-counter.css">
+  <script src="https://cdn.jsdelivr.net/npm/pace-js@1.2.4/pace.min.js" integrity="sha256-gqd7YTjg/BtfqWSwsJOvndl0Bxc8gFImLEkXQT8+qj0=" crossorigin="anonymous"></script>
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.spade-ace.tech","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.11.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":false,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="SQLite 的关键字有很多个(在3.27.2版本就支持136个)。从用户侧输入一个SQL语句到Tokenize(词法分析器)的时候，SQLite如何快速判断一个单词是否是关键字呢？第一想法肯定是利用哈希表，SQLite也确实是如此。但是如何构建一个查询高效，存储占用低，而且还支持关键字”裁剪”的哈希表呢？这里从源码的角度来看，SQLite是如何一步一步的精简优化一个词法分析器的关键字查询表的。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SQLite--KeywordHash">
+<meta property="og:url" content="https://blog.spade-ace.tech/2020/07/16/19.SQLite-KeywordHash/index.html">
+<meta property="og:site_name" content="Spade-Ace">
+<meta property="og:description" content="SQLite 的关键字有很多个(在3.27.2版本就支持136个)。从用户侧输入一个SQL语句到Tokenize(词法分析器)的时候，SQLite如何快速判断一个单词是否是关键字呢？第一想法肯定是利用哈希表，SQLite也确实是如此。但是如何构建一个查询高效，存储占用低，而且还支持关键字”裁剪”的哈希表呢？这里从源码的角度来看，SQLite是如何一步一步的精简优化一个词法分析器的关键字查询表的。">
+<meta property="og:locale" content="zh_CH">
+<meta property="article:published_time" content="2020-07-15T16:00:00.000Z">
+<meta property="article:modified_time" content="2022-06-16T11:24:59.879Z">
+<meta property="article:author" content="Caio">
+<meta property="article:tag" content="sqlite3">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://blog.spade-ace.tech/2020/07/16/19.SQLite-KeywordHash/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CH","comments":true,"permalink":"https://blog.spade-ace.tech/2020/07/16/19.SQLite-KeywordHash/","path":"2020/07/16/19.SQLite-KeywordHash/","title":"SQLite--KeywordHash"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>SQLite--KeywordHash | Spade-Ace</title>
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Spade-Ace</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">Not Just an iOS Developer</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="home fa-fw"></i>Home</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#SQLite%E6%BA%90%E7%A0%81%E7%9A%84%E6%9E%84%E6%88%90"><span class="nav-number">1.</span> <span class="nav-text">SQLite源码的构成</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E4%BD%BF%E7%94%A8mkkeywordhash%EF%BC%9F"><span class="nav-number">2.</span> <span class="nav-text">为什么要使用mkkeywordhash？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#mkkeywordhash-c"><span class="nav-number">3.</span> <span class="nav-text">mkkeywordhash.c</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%85%B3%E9%94%AE%E5%AD%97%E7%9A%84%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84"><span class="nav-number">3.1.</span> <span class="nav-text">关键字的数据结构</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9F%BA%E6%9C%AC%E5%A4%84%E7%90%86%E6%B5%81%E7%A8%8B"><span class="nav-number">3.2.</span> <span class="nav-text">基本处理流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%A3%81%E5%89%AA%E4%B8%8D%E6%94%AF%E6%8C%81%E7%9A%84%E5%85%B3%E9%94%AE%E5%AD%97"><span class="nav-number">3.3.</span> <span class="nav-text">裁剪不支持的关键字</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E5%92%8C%E8%AE%A1%E7%AE%97%E5%93%88%E5%B8%8C%E5%80%BC"><span class="nav-number">3.4.</span> <span class="nav-text">数据结构和计算哈希值</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%8C%E5%85%A8%E5%AD%90%E4%B8%B2%E7%9A%84%E5%85%B3%E7%B3%BB%E6%9F%A5%E6%89%BE"><span class="nav-number">3.5.</span> <span class="nav-text">完全子串的关系查找</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%89%8D%E7%BC%80%E3%80%81%E5%90%8E%E7%BC%80%E7%9A%84%E8%BF%9B%E4%B8%80%E6%AD%A5%E5%8E%8B%E7%BC%A9"><span class="nav-number">3.6.</span> <span class="nav-text">前缀、后缀的进一步压缩</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AE%A1%E7%AE%97%E5%8E%8B%E7%BC%A9%E7%9A%84%E6%9C%80%E5%90%8E%E7%BB%93%E6%9E%9C"><span class="nav-number">3.7.</span> <span class="nav-text">计算压缩的最后结果</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AE%A1%E7%AE%97%E5%92%8C%E7%94%9F%E6%88%90%E6%9C%80%E4%BC%98%E7%9A%84%E5%93%88%E5%B8%8C%E8%A1%A8"><span class="nav-number">3.8.</span> <span class="nav-text">计算和生成最优的哈希表</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AE%A1%E7%AE%97%E7%94%9F%E6%88%90%E5%93%88%E5%B8%8C%E8%A1%A8"><span class="nav-number">3.9.</span> <span class="nav-text">计算生成哈希表</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%B3%E9%94%AE%E5%AD%97%E7%9A%84%E6%9F%A5%E8%AF%A2%E8%BF%87%E7%A8%8B-%E5%87%BD%E6%95%B0keywordCode"><span class="nav-number">4.</span> <span class="nav-text">关键字的查询过程(函数keywordCode)</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Caio"
+      src="/images/timg.gif">
+  <p class="site-author-name" itemprop="name">Caio</p>
+  <div class="site-description" itemprop="description">Spade-Ace&apos; Tech Blog</div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">23</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2020/07/16/19.SQLite-KeywordHash/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/timg.gif">
+      <meta itemprop="name" content="Caio">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Spade-Ace">
+      <meta itemprop="description" content="Spade-Ace&apos; Tech Blog">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="SQLite--KeywordHash | Spade-Ace">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          SQLite--KeywordHash
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2020-07-16 00:00:00" itemprop="dateCreated datePublished" datetime="2020-07-16T00:00:00+08:00">2020-07-16</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2022-06-16 19:24:59" itemprop="dateModified" datetime="2022-06-16T19:24:59+08:00">2022-06-16</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/sqlite3/" itemprop="url" rel="index"><span itemprop="name">sqlite3</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <blockquote>
+<p>SQLite 的关键字有很多个(在3.27.2版本就支持136个)。从用户侧输入一个SQL语句到Tokenize(词法分析器)的时候，SQLite如何快速判断一个单词是否是关键字呢？第一想法肯定是利用哈希表，SQLite也确实是如此。但是如何构建一个查询高效，存储占用低，而且还支持关键字”裁剪”的哈希表呢？这里从源码的角度来看，SQLite是如何一步一步的精简优化一个词法分析器的关键字查询表的。</p>
+</blockquote>
+<span id="more"></span>
+
+<h2 id="SQLite源码的构成"><a href="#SQLite源码的构成" class="headerlink" title="SQLite源码的构成"></a>SQLite源码的构成</h2><p>SQLite本身是可以支持用cmake通过宏来裁剪功能和扩展功能的。在编译源码的过程中，会通过autoconfig生成一个Makefile。而Makefile的依赖中有一个<code>keywordhash.h</code>的文件。这个头文件就是用来做哈希表的构建的。可以看下Makefile中这个头文件的依赖与command。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">keywordhash.h:	$(TOP)/tool/mkkeywordhash.c</span><br><span class="line">	$(BCC) -o mkkeywordhash $(OPTS) $(TOP)/tool/mkkeywordhash.c</span><br><span class="line">	./mkkeywordhash &gt;keywordhash.h</span><br></pre></td></tr></table></figure>
+
+<p>这个文件只依赖<code>$(TOP)/tool/mkkeywordhash.c</code>这个文件的变更，并且command为:编译链接这个<code>mkkeywordhash.c</code>的源码，并且执行编译后的可执行文件，将输出重定向到<code>keywordhash.h</code>。那么到这里可以判断出<code>keywordhash.h</code>这个文件是<code>mkkeywordhash</code>这个程序生成的。</p>
+<p>在<code>keywordhash.h</code>文件的开头注释也写的很清楚:</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">** The code in this file has been automatically generated by</span><br><span class="line">**</span><br><span class="line">**   sqlite/tool/mkkeywordhash.c</span><br><span class="line">**</span><br><span class="line">** The code in this file implements a function that determines whether</span><br><span class="line">** or not a given identifier is really an SQL keyword.  The same thing</span><br><span class="line">** might be implemented more directly using a hand-written hash table.</span><br><span class="line">** But by using this automatically generated code, the size of the code</span><br><span class="line">** is substantially reduced.  This is important <span class="keyword">for</span> embedded applications</span><br><span class="line">** on platforms with limited memory.</span><br></pre></td></tr></table></figure>
+
+<p>注释写到，直接用hand-written(手写)的哈希表也可以达到同一个目的。但是为了达到极致的内存和性能等，SQLite做了更多的优化。</p>
+<h2 id="为什么要使用mkkeywordhash？"><a href="#为什么要使用mkkeywordhash？" class="headerlink" title="为什么要使用mkkeywordhash？"></a>为什么要使用mkkeywordhash？</h2><p>上面提到了，SQLite完全可以通过一个纯手写的哈希表来达到快速查询一个单词是否是SQL关键字的目的。但是，使用SQLite的一般都是移动或者嵌入式设备，那么内存必然是需要考虑的一个因素。136个关键字，加上哈希表的散列，内存消耗还是非常可观的。总结使用<code>mkkeywordhash</code>有以下的优点:</p>
+<ol>
+<li>支持裁剪。支持使用宏，动态地在编译期就可以决定SQLite支持哪些关键字(因为在编译期就会使用mkkeywordhash来动态生成源码)。</li>
+<li>支持动态关键字压缩。<code>mkkeywordhash</code>压缩了所有的关键字，压缩对象为前缀与其他关键字前缀相同的关键字，或者是其他关键字子串的关键字。例:<code>REINDEX</code>的后缀和<code>INDEXED</code>的前缀一致；<code>INDEX</code>是<code>REINDEX</code>的子串</li>
+<li>支持动态创建静态的哈希表。这句话怎么理解？静态哈希表可以理解：最终生成的哈希表肯定是静态的，因为SQLite编译后支持的关键字始终是固定的。动态创建是指，可以通过宏来动态决定这个关键字哈希表的大小，内容，以及哈希表的<em>碰撞率</em>。</li>
+</ol>
+<p>注意这里说的动态，是指在编译期根据不同的需求，<em>动态</em>的来定制SQLite，而不是运行期的动态输入输出。</p>
+<p>下面来详细看下这个<code>mkkeywordhash.c</code>的源码，看看SQLite在编译期间是如何动态生成需要的关键字哈希表的:</p>
+<h2 id="mkkeywordhash-c"><a href="#mkkeywordhash-c" class="headerlink" title="mkkeywordhash.c"></a>mkkeywordhash.c</h2><h3 id="关键字的数据结构"><a href="#关键字的数据结构" class="headerlink" title="关键字的数据结构"></a>关键字的数据结构</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment">** All the keywords of the SQL language are stored in a hash</span></span><br><span class="line"><span class="comment">** table composed of instances of the following structure.</span></span><br><span class="line"><span class="comment">*/</span></span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">Keyword</span> <span class="title">Keyword</span>;</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">Keyword</span> &#123;</span></span><br><span class="line">  <span class="type">char</span> *zName;         <span class="comment">/* The keyword name */</span></span><br><span class="line">  <span class="type">char</span> *zTokenType;    <span class="comment">/* Token value for this keyword */</span></span><br><span class="line">  <span class="type">int</span> mask;            <span class="comment">/* Code this keyword if non-zero */</span></span><br><span class="line">  <span class="type">int</span> id;              <span class="comment">/* Unique ID for this record */</span></span><br><span class="line">  <span class="type">int</span> hash;            <span class="comment">/* Hash on the keyword */</span></span><br><span class="line">  <span class="type">int</span> offset;          <span class="comment">/* Offset to start of name string */</span></span><br><span class="line">  <span class="type">int</span> len;             <span class="comment">/* Length of this keyword, not counting final \000 */</span></span><br><span class="line">  <span class="type">int</span> prefix;          <span class="comment">/* Number of characters in prefix */</span></span><br><span class="line">  <span class="type">int</span> longestSuffix;   <span class="comment">/* Longest suffix that is a prefix on another word */</span></span><br><span class="line">  <span class="type">int</span> iNext;           <span class="comment">/* Index in aKeywordTable[] of next with same hash */</span></span><br><span class="line">  <span class="type">int</span> substrId;        <span class="comment">/* Id to another keyword this keyword is embedded in */</span></span><br><span class="line">  <span class="type">int</span> substrOffset;    <span class="comment">/* Offset into substrId for start of this keyword */</span></span><br><span class="line">  <span class="type">char</span> zOrigName[<span class="number">20</span>];  <span class="comment">/* Original keyword name before processing */</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>这里需要说明一下，这个数据结构是用于<code>mkkeywordhash.c</code>，用来组织和描述所有需要编译进去的关键字的数据结构。在最后<code>mkkeywordhash</code>会根据计算好的所有关键字的<code>KeyWord</code>对象来生成最终的<code>keywordhash.h</code>文件中的静态哈希表。</p>
+<ul>
+<li>char *zName:           关键字字符串，最终会变成压缩后的关键字字符串。  </li>
+<li>char *zTokenType:      关键字类型，在tokenize暴露给外层类型。</li>
+<li>int mask:              不同的关键字可能是属于同一个功能的，宏的控制就通过控制mask的值来开启或者关闭同一类的能力</li>
+<li>int id:                关键字的id，会以关键字在数组中的索引值作为id，意义不大。</li>
+<li>int hash:              关键字的哈希值</li>
+<li>int offset:            关键字在压缩后的字符串表中的起始偏移</li>
+<li>int len:               关键字的原始长度</li>
+<li>int prefix:            关键字前缀和其他关键字后缀重叠部分的长度</li>
+<li>int longestSuffix:     当前关键字后缀和其他关键字前缀重叠部分的最长长度</li>
+<li>int iNext:             当哈希表发生碰撞的时候，通过链表来存储</li>
+<li>int substrId:          如果当前关键字是另一个关键字子串的时候，substrId就是另一个关键字的Id</li>
+<li>int substrOffset:      在substrId不为空的情况下，substrOffset标识子串开始的偏移</li>
+<li>char zOrigName[20]:    关键字原始字符串</li>
+</ul>
+<p>全局静态变量 aKeywordTable 存储了目前支持的所有的关键字。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> Keyword aKeywordTable[] = &#123;</span><br><span class="line">  &#123; <span class="string">&quot;ABORT&quot;</span>,            <span class="string">&quot;TK_ABORT&quot;</span>,        CONFLICT|TRIGGER       &#125;,</span><br><span class="line">  &#123; <span class="string">&quot;ACTION&quot;</span>,           <span class="string">&quot;TK_ACTION&quot;</span>,       FKEY                   &#125;,</span><br><span class="line">  &#123; <span class="string">&quot;ADD&quot;</span>,              <span class="string">&quot;TK_ADD&quot;</span>,          ALTER                  &#125;,</span><br><span class="line">  &#123; <span class="string">&quot;AFTER&quot;</span>,            <span class="string">&quot;TK_AFTER&quot;</span>,        TRIGGER                &#125;,</span><br><span class="line">  <span class="comment">/* ... 136个关键字 ... */</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<h3 id="基本处理流程"><a href="#基本处理流程" class="headerlink" title="基本处理流程"></a>基本处理流程</h3><p><code>mkkeywordhash</code>分成了几个步骤:</p>
+<h3 id="裁剪不支持的关键字"><a href="#裁剪不支持的关键字" class="headerlink" title="裁剪不支持的关键字"></a>裁剪不支持的关键字</h3><p>在<code>mkkeywordhash</code> main函数开始的第一步就是裁减掉不使用的关键字，如何裁剪？</p>
+<p>在 aKeywordTable 和 <code>Keyword</code> 的数据结构里可以看到，每一个关键字都给予了一个mask，这个mask可以理解为关键字的tag，不同的mask值不一样，不同的关键字可以同时具有相同的mask，同一个mask可以具有多个mask。SQLite通过定义mask的值来确定是否需要裁剪。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">ifdef</span> SQLITE_OMIT_ALTERTABLE</span></span><br><span class="line"><span class="meta">#  <span class="keyword">define</span> ALTER      0</span></span><br><span class="line"><span class="meta">#<span class="keyword">else</span></span></span><br><span class="line"><span class="meta">#  <span class="keyword">define</span> ALTER      0x00000001</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br></pre></td></tr></table></figure>
+
+<p>例如，如果定义了<code>SQLITE_OMIT_ALTERTABLE</code>宏，那么<code>ALTER</code>就会被定义为0，那么只具有<code>ALTER</code>mask的关键字的mask值就会被标记为0。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* Remove entries from the list of keywords that have mask==0 */</span></span><br><span class="line"><span class="keyword">for</span>(i=j=<span class="number">0</span>; i&lt;nKeyword; i++)&#123;</span><br><span class="line">    <span class="keyword">if</span>( aKeywordTable[i].mask==<span class="number">0</span> ) <span class="keyword">continue</span>;</span><br><span class="line">    <span class="keyword">if</span>( j&lt;i )&#123;</span><br><span class="line">      aKeywordTable[j] = aKeywordTable[i];</span><br><span class="line">    &#125;</span><br><span class="line">    j++;</span><br><span class="line">&#125;</span><br><span class="line">nKeyword = j;</span><br></pre></td></tr></table></figure>
+<p>然后通过遍历 akeywordTable 数组，过滤掉所有关键字mask为0的关键字，遍历的时候使用了快慢指针，分别指向当前遍历索引和存储的索引。</p>
+<h3 id="数据结构和计算哈希值"><a href="#数据结构和计算哈希值" class="headerlink" title="数据结构和计算哈希值"></a>数据结构和计算哈希值</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span>(i=<span class="number">0</span>; i&lt;nKeyword; i++)&#123;</span><br><span class="line">    Keyword *p = &amp;aKeywordTable[i];</span><br><span class="line">    p-&gt;len = (<span class="type">int</span>)<span class="built_in">strlen</span>(p-&gt;zName);</span><br><span class="line">    assert( p-&gt;len&lt;<span class="keyword">sizeof</span>(p-&gt;zOrigName) );</span><br><span class="line">    <span class="built_in">memcpy</span>(p-&gt;zOrigName, p-&gt;zName, p-&gt;len+<span class="number">1</span>);</span><br><span class="line">    totalLen += p-&gt;len;</span><br><span class="line">    p-&gt;hash = (charMap(p-&gt;zName[<span class="number">0</span>])*<span class="number">4</span>) ^</span><br><span class="line">              (charMap(p-&gt;zName[p-&gt;len<span class="number">-1</span>])*<span class="number">3</span>) ^ (p-&gt;len*<span class="number">1</span>);</span><br><span class="line">    p-&gt;id = i+<span class="number">1</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>在裁剪完成之后，当前aKeywordTable里的nKeyword个关键字就是SQLite本次编译需要支持的所有关键字了。</p>
+<ul>
+<li>以每一个关键字的索引作为id</li>
+<li>p-&gt;len 存关键字的原始长度</li>
+<li>p-&gt;zOrigName 存储原始字符串，也就是当前 的p-&gt;zName 字段</li>
+<li>哈希算法:(关键字的第一个字符<em>4)^(关键字的最后一个字符</em>3)^(关键字名字的长度)) 大致从aKeywordTable中的关键字看到，首尾字符已经可以获得很少的哈希冲突了。</li>
+</ul>
+<h3 id="完全子串的关系查找"><a href="#完全子串的关系查找" class="headerlink" title="完全子串的关系查找"></a>完全子串的关系查找</h3><p>首先可以压缩的情况就是，A串是B串的子串，这种情况下，我们只需要记录A串是B串子串的这一关系，以及A在B中起始的偏移值既可。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* Sort the table from shortest to longest keyword */</span></span><br><span class="line"><span class="comment">/* 从关键字字符串长度的最短到最长做排序 */</span></span><br><span class="line">qsort(aKeywordTable, nKeyword, <span class="keyword">sizeof</span>(aKeywordTable[<span class="number">0</span>]), keywordCompare1);</span><br><span class="line"></span><br><span class="line"><span class="comment">/* Look for short keywords embedded in longer keywords */</span></span><br><span class="line"><span class="comment">/* 从数组中找到，某些关键字是另一些关键字子串的情况，例如,IN是INDEX的子串，INDEX是INDEXED的子串*/</span></span><br><span class="line"><span class="keyword">for</span>(i=nKeyword<span class="number">-2</span>; i&gt;=<span class="number">0</span>; i--)&#123;<span class="comment">//从倒数第二个开始</span></span><br><span class="line">    Keyword *p = &amp;aKeywordTable[i];<span class="comment">//p: 当前关键字</span></span><br><span class="line">    <span class="keyword">for</span>(j=nKeyword<span class="number">-1</span>; j&gt;i &amp;&amp; p-&gt;substrId==<span class="number">0</span>; j--)&#123;<span class="comment">//依次判断当前关键字，是否是其他关键字(其他关键字从最后向前遍历)的子串</span></span><br><span class="line">        Keyword *pOther = &amp;aKeywordTable[j];</span><br><span class="line">        <span class="keyword">if</span>( pOther-&gt;substrId ) <span class="keyword">continue</span>;</span><br><span class="line">        <span class="keyword">if</span>( pOther-&gt;len&lt;=p-&gt;len ) <span class="keyword">continue</span>;</span><br><span class="line"></span><br><span class="line">        <span class="comment">//判断 p 是不是 pOther 关键字的子串</span></span><br><span class="line">        <span class="keyword">for</span>(k=<span class="number">0</span>; k&lt;=pOther-&gt;len-p-&gt;len; k++)&#123;</span><br><span class="line">            <span class="keyword">if</span>( <span class="built_in">memcmp</span>(p-&gt;zName, &amp;pOther-&gt;zName[k], p-&gt;len)==<span class="number">0</span> )&#123;</span><br><span class="line">                p-&gt;substrId = pOther-&gt;id;</span><br><span class="line">                p-&gt;substrOffset = k;</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>如果A是B的子串，那么A的长度必然不长于B。所以先按照长度，从短到长排序。</li>
+<li>如果A是B的子串，那么A的substrId会被记录为B的Id，A的substrOffset会被记录为子串的起始偏移。</li>
+</ul>
+<h3 id="前缀、后缀的进一步压缩"><a href="#前缀、后缀的进一步压缩" class="headerlink" title="前缀、后缀的进一步压缩"></a>前缀、后缀的进一步压缩</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* Compute the longestSuffix value for every word */</span></span><br><span class="line"><span class="comment">/* 进步压缩，除了完全包含其他关键字的以外，其他关键字中，</span></span><br><span class="line"><span class="comment">  每一个关键字的后缀中与其他关键字的前缀相等的最长长度是多少 */</span></span><br><span class="line"><span class="keyword">for</span>(i=<span class="number">0</span>; i&lt;nKeyword; i++)&#123;<span class="comment">//遍历所有关键字</span></span><br><span class="line">  Keyword *p = &amp;aKeywordTable[i];</span><br><span class="line">  <span class="keyword">if</span>( p-&gt;substrId ) <span class="keyword">continue</span>;<span class="comment">//忽略已经是其他关键字子串的关键字。</span></span><br><span class="line">  <span class="keyword">for</span>(j=<span class="number">0</span>; j&lt;nKeyword; j++)&#123;<span class="comment">//双重循环遍历</span></span><br><span class="line">    Keyword *pOther;</span><br><span class="line">    <span class="keyword">if</span>( j==i ) <span class="keyword">continue</span>;<span class="comment">//不和自己比较</span></span><br><span class="line">    pOther = &amp;aKeywordTable[j];</span><br><span class="line">    <span class="keyword">if</span>( pOther-&gt;substrId ) <span class="keyword">continue</span>;<span class="comment">//同样忽略已经是其他关键字子串的关键字。</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">//计算 p 的后缀和 pOther 的前缀最长多少是相同的</span></span><br><span class="line">    <span class="keyword">for</span>(k=p-&gt;longestSuffix+<span class="number">1</span>; k&lt;p-&gt;len &amp;&amp; k&lt;pOther-&gt;len; k++)&#123;</span><br><span class="line">      <span class="keyword">if</span>( <span class="built_in">memcmp</span>(&amp;p-&gt;zName[p-&gt;len-k], pOther-&gt;zName, k)==<span class="number">0</span> )&#123;</span><br><span class="line">        p-&gt;longestSuffix = k;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">  <span class="comment">/* Sort the table into reverse order by length */</span></span><br><span class="line">  <span class="comment">/* 从关键字最长后缀相同长度的 最长到最短 做排序 */</span></span><br><span class="line">  qsort(aKeywordTable, nKeyword, <span class="keyword">sizeof</span>(aKeywordTable[<span class="number">0</span>]), keywordCompare2);</span><br></pre></td></tr></table></figure>
+
+<p>除了上面一节中找出的子串关键字以外，剩下的关键字中，找出每一个关键字的后缀与其他关键字前缀相同的最长长度。最后以这个值从大到小做排序。这个步骤看似好像没有什么实际作用，但是这也是关键的一步，后续再分析为什么需要这么做。</p>
+<h3 id="计算压缩的最后结果"><a href="#计算压缩的最后结果" class="headerlink" title="计算压缩的最后结果"></a>计算压缩的最后结果</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* Fill in the offset for all entries */</span></span><br><span class="line">nChar = <span class="number">0</span>;</span><br><span class="line"><span class="keyword">for</span>(i=<span class="number">0</span>; i&lt;nKeyword; i++)&#123;</span><br><span class="line">  Keyword *p = &amp;aKeywordTable[i];</span><br><span class="line">  <span class="keyword">if</span>( p-&gt;offset&gt;<span class="number">0</span> || p-&gt;substrId ) <span class="keyword">continue</span>;</span><br><span class="line">  p-&gt;offset = nChar;</span><br><span class="line">  nChar += p-&gt;len;</span><br><span class="line">  <span class="keyword">for</span>(k=p-&gt;len<span class="number">-1</span>; k&gt;=<span class="number">1</span>; k--)&#123;</span><br><span class="line">    <span class="keyword">for</span>(j=i+<span class="number">1</span>; j&lt;nKeyword; j++)&#123;</span><br><span class="line">      Keyword *pOther = &amp;aKeywordTable[j];</span><br><span class="line">      <span class="keyword">if</span>( pOther-&gt;offset&gt;<span class="number">0</span> || pOther-&gt;substrId ) <span class="keyword">continue</span>;</span><br><span class="line">      <span class="keyword">if</span>( pOther-&gt;len&lt;=k ) <span class="keyword">continue</span>;</span><br><span class="line">      <span class="keyword">if</span>( <span class="built_in">memcmp</span>(&amp;p-&gt;zName[p-&gt;len-k], pOther-&gt;zName, k)==<span class="number">0</span> )&#123;</span><br><span class="line">        p = pOther;</span><br><span class="line">        p-&gt;offset = nChar - k;</span><br><span class="line">        nChar = p-&gt;offset + p-&gt;len;</span><br><span class="line">        p-&gt;zName += k;</span><br><span class="line">        p-&gt;len -= k;</span><br><span class="line">        p-&gt;prefix = k;</span><br><span class="line">        j = i;</span><br><span class="line">        k = p-&gt;len;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span>(i=<span class="number">0</span>; i&lt;nKeyword; i++)&#123;</span><br><span class="line">  Keyword *p = &amp;aKeywordTable[i];</span><br><span class="line">  <span class="comment">//处理带subStrId的</span></span><br><span class="line">  <span class="keyword">if</span>( p-&gt;substrId )&#123;</span><br><span class="line">    p-&gt;offset = findById(p-&gt;substrId)-&gt;offset + p-&gt;substrOffset;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>接下来对数组进行最后的压缩: 对数组进行遍历，遍历的目的是为了在当前关键字数组中，找到前缀与这个关键字后缀一样的关键字。并且，将这个关键字拼接在后面。</p>
+<p>举个例子:现有关键字<code>abcde``def``efg</code>,因为<code>def</code>的前缀<code>de</code>与<code>abcde</code>的后缀相同，所以在记录第二个关键字的时候，只需要记录<code>f</code>，与在前一个关键字中后缀偏移3即可。</p>
+<p>处理完所有的前后缀相接的字符串之后，再处理子串的问题，子串问题也就相对简单了。</p>
+<p>代码中可以注意到下面这几个问题:</p>
+<ol>
+<li>在上一节最后会对关键字排序，排序方法是按照每个关键字的最长相同后缀降序排列。</li>
+<li>在比较关键字的后缀是否一致的时候，从相同长度为(<code>k=p-&gt;len-1</code>)开始比较。但是找到前缀与之相同的字符串之后并没有立刻break。</li>
+</ol>
+<p>下面来解释这两个问题：</p>
+<ul>
+<li>首先SQLite希望，每次都是优先从与其他关键字前缀相同的更长后缀的的关键字中挑选出一个关键字，来拼接到关键字表后面。有点拗口，但是也不难以理解。这也就是为什么上一节中SQLite需要做一个看似“没有意义的”计算和排序。</li>
+<li>在找到一个关键字拼接的下一个关键字之后，注意<code>p = pOther;</code>当前的关键字p变成了下一个关键字pOther。这一步也不难理解，pOther将会变成下一步中寻找最长后缀的关键字。</li>
+<li>一直到所有的关键字都被check或者处理过(i&#x3D;&#x3D;nKeyword)之后，才可以结束本次压缩。</li>
+</ul>
+<h3 id="计算和生成最优的哈希表"><a href="#计算和生成最优的哈希表" class="headerlink" title="计算和生成最优的哈希表"></a>计算和生成最优的哈希表</h3><p>如何衡量一个哈希表是否是最优的呢？有两个指标，一个是<em>稀疏程度</em>，一个是<em>表的大小</em>。</p>
+<p>越稀疏，肯定会让哈希表的碰撞率越低，但是随之带来的就是size变大。就像时间复杂度和空间复杂度一样，毕竟鱼和熊掌不可兼得。</p>
+<p>那么如何去衡量这个哈希表的这两个指标呢？SQLite使用一个bestCount变量，来衡量。可以类似的理解为一个score得分。得分越高，哈希表代价(碰撞率和大小)越大，反之亦然。</p>
+<p>如何计算这个得分呢？既然有两个因素，那么必然有权重。如果简单一点设计的话，那就是 碰撞次数 * 权值1+哈希表大小 * 权值2，其中 权值1+权值2&#x3D;1。SQLite设计的时候也是这个思路，但是不是等比分配权值。它认为，比起哈希表的大小来说，碰撞的代价要高的多的多。也就是说相对来说更加希望用空间来换时间。</p>
+<p>于是有了以下的算法：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* Figure out how big to make the hash table in order to minimize the</span></span><br><span class="line"><span class="comment">** number of collisions */</span></span><br><span class="line"><span class="comment">/* 计算一下 最优的哈希表大小*/</span></span><br><span class="line"><span class="comment">// SQLite 从 [nKeyword, 2*nKeyword]之间选择一个合适的哈希表大小</span></span><br><span class="line"><span class="comment">// 如何选择？选择“碰撞值”最低？如何计算碰撞值？</span></span><br><span class="line">bestSize = nKeyword;</span><br><span class="line">bestCount = nKeyword*nKeyword;</span><br><span class="line"><span class="keyword">for</span>(i=nKeyword/<span class="number">2</span>; i&lt;=<span class="number">2</span>*nKeyword; i++)&#123;</span><br><span class="line">  <span class="keyword">for</span>(j=<span class="number">0</span>; j&lt;i; j++) aKWHash[j] = <span class="number">0</span>;</span><br><span class="line">  <span class="keyword">for</span>(j=<span class="number">0</span>; j&lt;nKeyword; j++)&#123;</span><br><span class="line">    h = aKeywordTable[j].hash % i;</span><br><span class="line">    aKWHash[h] *= <span class="number">2</span>;</span><br><span class="line">    aKWHash[h]++;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">for</span>(j=count=<span class="number">0</span>; j&lt;i; j++) count += aKWHash[j];</span><br><span class="line">  <span class="keyword">if</span>( count&lt;bestCount )&#123;</span><br><span class="line">    bestCount = count;</span><br><span class="line">    bestSize = i;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>虽然希望查询速度快，但是也不能无限制大小。SQLite希望把哈希表的大小控制在[nKeyword, 2 x nKeyword]之间(毋庸置疑，最好的情况肯定是nKeyword，即所有值的哈希都不一样，一次碰撞都不发生)。在这个范围内计算每一个大小的哈希表的得分，算法为，计算所有关键字的哈希索引(即哈希值模当前的哈希表大小)，每发生一次碰撞的时候，把当前索引对应的值x2 并且加1，然后计算所有的值的总和。bestCount就存储了这个值。</p>
+<p>具体计算步骤：</p>
+<ol>
+<li>aKWHash默认值全部重置为0。</li>
+<li>依次计算关键字中的哈希值，得到每一个关键字在哈希表中的索引。</li>
+<li>将对应索引中的值<em>2 + 1（第一次命中的时候结果为1，第二次的时候结果为1</em>2+1&#x3D;3，第三次的的时候结果为3*2+1&#x3D;7）</li>
+<li>计算所有aKWHash中值的和，这个和就是当前这个大小的aKWHash的”score得分”。</li>
+<li>在哈希表大小为[nKeyword, 2 x nKeyword]的范围内，计算出其中”score得分最低的”一个大小。</li>
+</ol>
+<p>其中 x2 是一个”放大因子”，利用 x2 这个指数的增长来放大一次碰撞带来的影响。即碰撞冲突增加的时候，这个”score”会以指数级增长。2 就可以理解为哈希表大小和哈希碰撞之间”权值”，只不过不是等比关系，而是指数关系。如果希望碰撞的影响再大，那么可以把这个值改成 3，4，5…</p>
+<p>在<code>keywordhash.h</code>头文件顶部会输出当前哈希表的<code>Hash score</code>, 举个例子，在当前版本(3.27.2)下，如果支持所有的关键字，计算以 2 为“放大因子”的最合适的哈希表的<code>Hash score</code>为<em>208</em>。</p>
+<h3 id="计算生成哈希表"><a href="#计算生成哈希表" class="headerlink" title="计算生成哈希表"></a>计算生成哈希表</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* Compute the hash */</span></span><br><span class="line">  <span class="keyword">for</span>(i=<span class="number">0</span>; i&lt;bestSize; i++) aKWHash[i] = <span class="number">0</span>;</span><br><span class="line">  <span class="keyword">for</span>(i=<span class="number">0</span>; i&lt;nKeyword; i++) &#123;</span><br><span class="line">    <span class="comment">//头插法..</span></span><br><span class="line">    h = aKeywordTable[i].hash % bestSize;</span><br><span class="line">    aKeywordTable[i].iNext = aKWHash[h];</span><br><span class="line">    aKWHash[h] = i+<span class="number">1</span>;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+
+<p>从上一步计算的结果中可以得到，bestSize -&gt; 最优的哈希表大小，bestCount -&gt; 最优的哈希表得分。</p>
+<p>依次计算所有的关键字的哈希值，每个命中的哈希值存储的是当前索引+1。一旦发生冲突的时候，使用头插法，在冲突的哈希索引值存储一个链表。<code>iNext</code>即为next指针。</p>
+<p>到这里为止，整个哈希表的计算已经全部完成了……后面的代码生成也已经很简单了，纯字符串拼接。</p>
+<p><code>aKeywordTable</code>是一个对象数组，自动输出代码的时候，将整个数组拆分成了N个数组。</p>
+<p><code>zKWText</code>: 也就是<code>aKeywordTable</code>中每一个元素<code>KeyWord</code>的<code>zName</code>变量的拼接，即最终压缩后的所有关键字的字符。<br><code>aKWHash</code>: 每一个哈希值(索引)对应的关键字的索引。<br><code>aKWNext</code>: 哈希冲突时的链表。每一个索引下存储的值，表示，与该索引对应的关键字具有相同哈希值的下一个关键字的索引。<br><code>aKWLen</code> : 表示第i个关键字的字符长度。<br><code>aKWOffset</code> : 表示第一个关键字在<code>zKWText</code>字符表内的偏移长度。<br><code>aKWCode</code> : 返回给<code>parser</code>模块的关键字码。</p>
+<h2 id="关键字的查询过程-函数keywordCode"><a href="#关键字的查询过程-函数keywordCode" class="headerlink" title="关键字的查询过程(函数keywordCode)"></a>关键字的查询过程(函数keywordCode)</h2><p>正向的看函数<code>keywordCode(const char *z, int n, int *pType)</code>，也就是上面自动生成的代码，看下是否符合之前设计的预期。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* Check to see if z[0..n-1] is a keyword. If it is, write the</span></span><br><span class="line"><span class="comment">** parser symbol code for that keyword into *pType.  Always</span></span><br><span class="line"><span class="comment">** return the integer n (the length of the token). */</span></span><br><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">keywordCode</span><span class="params">(<span class="type">const</span> <span class="type">char</span> *z, <span class="type">int</span> n, <span class="type">int</span> *pType)</span>&#123;</span><br><span class="line">  <span class="type">int</span> i, j;</span><br><span class="line">  <span class="type">const</span> <span class="type">char</span> *zKW;</span><br><span class="line">  <span class="keyword">if</span>( n&gt;=<span class="number">2</span> )&#123;</span><br><span class="line">    i = ((charMap(z[<span class="number">0</span>])*<span class="number">4</span>) ^ (charMap(z[n<span class="number">-1</span>])*<span class="number">3</span>) ^ n) % <span class="number">127</span>;<span class="comment">//计算关键字的散列索引</span></span><br><span class="line">    <span class="keyword">for</span>(i=((<span class="type">int</span>)aKWHash[i])<span class="number">-1</span>; i&gt;=<span class="number">0</span>; i=((<span class="type">int</span>)aKWNext[i])<span class="number">-1</span>)&#123;</span><br><span class="line">      <span class="keyword">if</span>( aKWLen[i]!=n ) <span class="keyword">continue</span>;</span><br><span class="line">      j = <span class="number">0</span>;</span><br><span class="line">      zKW = &amp;zKWText[aKWOffset[i]];</span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> SQLITE_ASCII</span></span><br><span class="line">      <span class="keyword">while</span>( j&lt;n &amp;&amp; (z[j]&amp;~<span class="number">0x20</span>)==zKW[j] )&#123; j++; &#125;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> SQLITE_EBCDIC</span></span><br><span class="line">      <span class="keyword">while</span>( j&lt;n &amp;&amp; <span class="built_in">toupper</span>(z[j])==zKW[j] )&#123; j++; &#125;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line">      <span class="keyword">if</span>( j&lt;n ) <span class="keyword">continue</span>;</span><br><span class="line">      testcase( i==<span class="number">0</span> ); <span class="comment">/* REINDEX */</span></span><br><span class="line">      testcase( i==<span class="number">1</span> ); <span class="comment">/* INDEXED */</span></span><br><span class="line">    <span class="comment">//   ......</span></span><br><span class="line">      testcase( i==<span class="number">135</span> ); <span class="comment">/* PRIMARY */</span></span><br><span class="line">      *pType = aKWCode[i];</span><br><span class="line">      <span class="keyword">break</span>;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> n;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>函数传入的有三个参数:第一个是需要判断的关键字的字符串的指针，第二个就是关键字的长度，第三个是函数需要返回的当前关键字的类型(也就是上面所说的，返回给<code>parser</code>的关键字码)。函数的返回值始终都是n，也就是关键字的长度。</p>
+<ol>
+<li>关键字长度均大于2。</li>
+<li>计算关键字的哈希值，以及哈希索引<code>i = ((charMap(z[0])*4) ^ (charMap(z[n-1])*3) ^ n) % 127</code>。127是当前哈希表的大小，在生成代码的时候会自动计算。</li>
+<li>从aKWHash[i]中获取到关键字的索引，遍历当前索引对应的aKWNext的链表。</li>
+<li>先判断关键字的长度与当前参数是否相同。</li>
+<li>从zKWText中获取到当前关键字的字符串，根据不同的编码进行比较。</li>
+<li>重复第3步骤，直到找到字符串与关键字相同。（因为哈希有冲突，所以需要遍历哈希值对应的整个链表）</li>
+</ol>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/sqlite3/" rel="tag"># sqlite3</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2020/06/29/18.db-system-design-imp(VM)/" rel="prev" title="The Virtual Machine Module">
+                  <i class="fa fa-chevron-left"></i> The Virtual Machine Module
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2020/07/21/20.SQLite-Tokenize/" rel="next" title="SQLite--Tokenize(词法分析器)">
+                  SQLite--Tokenize(词法分析器) <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Caio</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/pace.js"></script>
+
+  
+
+
+
+
+
+</body>
+</html>

@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-CH">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 6.2.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/spade-logo-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/spade-logo-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/spade-logo-next.png">
+  <link rel="mask-icon" href="/images/spade-logo-next.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.1.1/css/all.min.css" integrity="sha256-DfWjNxDkM94fVBWx1H5BMMp0Zq7luBlV8QRcSES7s+0=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pace-js@1.2.4/themes/blue/pace-theme-big-counter.css">
+  <script src="https://cdn.jsdelivr.net/npm/pace-js@1.2.4/pace.min.js" integrity="sha256-gqd7YTjg/BtfqWSwsJOvndl0Bxc8gFImLEkXQT8+qj0=" crossorigin="anonymous"></script>
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.spade-ace.tech","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.11.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":false,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="在开启sqlite wal功能的时候，会在db文件的同级目录下多出一个，与db同名的，后缀为-shm的文件，这个文件就是本文需要讨论的shared-memory（shm）。文章只讨论sqlite在os层中shm的实现，而不关注shm中存储的内容和数据结构。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SQLite--OS【共享内存】">
+<meta property="og:url" content="https://blog.spade-ace.tech/2020/03/18/13.sqlite-os-shm/index.html">
+<meta property="og:site_name" content="Spade-Ace">
+<meta property="og:description" content="在开启sqlite wal功能的时候，会在db文件的同级目录下多出一个，与db同名的，后缀为-shm的文件，这个文件就是本文需要讨论的shared-memory（shm）。文章只讨论sqlite在os层中shm的实现，而不关注shm中存储的内容和数据结构。">
+<meta property="og:locale" content="zh_CH">
+<meta property="article:published_time" content="2020-03-17T16:00:00.000Z">
+<meta property="article:modified_time" content="2022-06-16T11:24:59.877Z">
+<meta property="article:author" content="Caio">
+<meta property="article:tag" content="sqlite3">
+<meta property="article:tag" content="os">
+<meta property="article:tag" content="shm">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://blog.spade-ace.tech/2020/03/18/13.sqlite-os-shm/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CH","comments":true,"permalink":"https://blog.spade-ace.tech/2020/03/18/13.sqlite-os-shm/","path":"2020/03/18/13.sqlite-os-shm/","title":"SQLite--OS【共享内存】"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>SQLite--OS【共享内存】 | Spade-Ace</title>
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Spade-Ace</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">Not Just an iOS Developer</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="home fa-fw"></i>Home</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Shm-%E5%85%B1%E4%BA%AB%E5%86%85%E5%AD%98"><span class="nav-number">1.</span> <span class="nav-text">Shm-共享内存</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%85%B3%E4%BA%8Emmap"><span class="nav-number">1.1.</span> <span class="nav-text">关于mmap</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84"><span class="nav-number">1.2.</span> <span class="nav-text">数据结构</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#sqlite3OsShmMap"><span class="nav-number">1.3.</span> <span class="nav-text">sqlite3OsShmMap</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#sqlite3OsShmUnmap"><span class="nav-number">1.4.</span> <span class="nav-text">sqlite3OsShmUnmap</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#sqlite3OsShmLock"><span class="nav-number">1.5.</span> <span class="nav-text">sqlite3OsShmLock</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#sqlite3OsShmBarrier"><span class="nav-number">1.6.</span> <span class="nav-text">sqlite3OsShmBarrier</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Caio"
+      src="/images/timg.gif">
+  <p class="site-author-name" itemprop="name">Caio</p>
+  <div class="site-description" itemprop="description">Spade-Ace&apos; Tech Blog</div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">23</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2020/03/18/13.sqlite-os-shm/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/timg.gif">
+      <meta itemprop="name" content="Caio">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Spade-Ace">
+      <meta itemprop="description" content="Spade-Ace&apos; Tech Blog">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="SQLite--OS【共享内存】 | Spade-Ace">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          SQLite--OS【共享内存】
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2020-03-18 00:00:00" itemprop="dateCreated datePublished" datetime="2020-03-18T00:00:00+08:00">2020-03-18</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2022-06-16 19:24:59" itemprop="dateModified" datetime="2022-06-16T19:24:59+08:00">2022-06-16</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/sqlite3/" itemprop="url" rel="index"><span itemprop="name">sqlite3</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <blockquote>
+<p>在开启sqlite wal功能的时候，会在db文件的同级目录下多出一个，与db同名的，后缀为-shm的文件，这个文件就是本文需要讨论的shared-memory（shm）。文章只讨论sqlite在os层中shm的实现，而不关注shm中存储的内容和数据结构。</p>
+</blockquote>
+<span id="more"></span>
+
+<h2 id="Shm-共享内存"><a href="#Shm-共享内存" class="headerlink" title="Shm-共享内存"></a>Shm-共享内存</h2><p>shm-shared memory 是在开启wal的时候被用来存储wal-index(这个不是本层考虑的)。所以在没有定义<code>SQLITE_OMIT_WAL</code>这个宏的时候，sqlite os层提供了shm的能力。</p>
+<p>从暴露的接口上来开一共只有4个接口函数，分别是：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">sqlite3OsShmMap</span><span class="params">(sqlite3_file *,<span class="type">int</span>,<span class="type">int</span>,<span class="type">int</span>,<span class="type">void</span> <span class="keyword">volatile</span> **)</span>;<span class="comment">//映射文件</span></span><br><span class="line"><span class="type">int</span> <span class="title function_">sqlite3OsShmLock</span><span class="params">(sqlite3_file *id, <span class="type">int</span>, <span class="type">int</span>, <span class="type">int</span>)</span>;<span class="comment">//mmap锁</span></span><br><span class="line"><span class="type">void</span> <span class="title function_">sqlite3OsShmBarrier</span><span class="params">(sqlite3_file *id)</span>;<span class="comment">//内存屏障</span></span><br><span class="line"><span class="type">int</span> <span class="title function_">sqlite3OsShmUnmap</span><span class="params">(sqlite3_file *id, <span class="type">int</span>)</span>;<span class="comment">//取消映射文件</span></span><br></pre></td></tr></table></figure>
+
+<p>暂先不看代码，需要先从mmap开始说起…</p>
+<h3 id="关于mmap"><a href="#关于mmap" class="headerlink" title="关于mmap"></a>关于mmap</h3><p>这也是在看源码的时候，发现知识盲区了…然后去查了大量关于mmap的资料。这样虽然效率低了一点，但是还是便于之后的代码理解的。</p>
+<p>mmap其实之前也有遇到用过，它的两个特性印象比较深刻，一个是mmap是内存文件映射，可以用读写内存的方式读写文件内容，二是在应用crash的时候或者系统掉电的时候可以把内存中数据的flush到文件中。但这些似乎不太够…</p>
+<p>首先看<strong>普通</strong>的文件读写：</p>
+<p>在此之前，再了解一个<strong>页缓存</strong>，页缓存是内核的一个重要的磁盘高速缓存，<strong>以页为单位进行缓存</strong>。可以简单的把它理解为…memory cache。读数据的时候会优先的从页缓存中读，而写数据的时候，也是优先写入页缓存，并且不会立刻回写文件，而是标记dirty，延迟一段时间或者手动调用sync的时候才会回写。</p>
+<p>这时候我们再看文件读写，发起一个read()或者write()系统调用，我们一般会分配一个buff缓冲区，然后会进入内核态，cpu会从页缓存中读取指定的文件缓存。如果发现页缓存中没有，那么这个时候cpu就会让出总线，用DMA的方式，将数据从磁盘拷贝到页缓存中，拷贝完成的时候处理DMA中断。在此之后，因为拷贝的地址是内核地址，cpu需要在内核态，再把页缓存拷贝至用户态的虚拟地址映射的物理地址即（buff对应的缓冲区）。</p>
+<p>也就是说，普通文件的读写，会发生两次内存拷贝。</p>
+<p>我们再看<strong>mmap</strong>的文件读写：</p>
+<p>我们使用mmap的时候，系统会首先分配一段虚拟内存，并且在该过程中建立了vma和映射文件的关联，向上返回虚拟内存的首地址，此时还没有建立和物理内存的映射关系。等到第一次访问虚拟地址时，发生缺页异常，将对应的文件内容读取到页缓存，<strong>并建立虚拟内存和页缓存的映射关系</strong>，如此只有一次将文件数据读取页缓存的过程。</p>
+<p>这里有个问题:mmap并不是直接将虚拟内存对应的物理内存和文件建立映射关系，二是内核将数据拷贝至页缓存，然后将虚拟内存直接映射到了页缓存上，从而避免的二次拷贝</p>
+<p>这也就是mmap比普通文件读写要快的原因。mmap的其他相关知识可以访问后文的资料链接。</p>
+<h3 id="数据结构"><a href="#数据结构" class="headerlink" title="数据结构"></a>数据结构</h3><p>每个unixFile关联了一个unixShm结构体，这个结构体用来描述一个已打开的共享文件。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">unixShm</span> &#123;</span></span><br><span class="line">  unixShmNode *pShmNode;     <span class="comment">/* The underlying unixShmNode object */</span></span><br><span class="line">  unixShm *pNext;            <span class="comment">/* Next unixShm with the same unixShmNode */</span></span><br><span class="line">  u8 hasMutex;               <span class="comment">/* True if holding the unixShmNode-&gt;pShmMutex */</span></span><br><span class="line">  u8 id;                     <span class="comment">/* Id of this connection within its unixShmNode */</span></span><br><span class="line">  u16 sharedMask;            <span class="comment">/* Mask of shared locks held */</span></span><br><span class="line">  u16 exclMask;              <span class="comment">/* Mask of exclusive locks held */</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>而从注释上也可以看出来，每一个unixShm还有一个unixShmNode。而指向同一个unixShmNode的unixShm都通过pNext关联在一个链表内。使用同一个unixShmNode的shm链表被存储在unixShmNode的pfirst指针中。同一个数据库文件的不同的数据库连接（假设使用了WAL mode），包含的是不同的unixShm，但是是同一个unixShmNode。</p>
+<p>unixShmNode从某种意义上来说是可以与unixInodeInfo关联在一起的，但是开发者可能不想让所有不使用shm（WAL mode）的数据连接也持有这些没有意义的数据，所以才做了分离，只做了unixInodeInfo内的pShmNode指针和unixShmNode的pInode指针的相互指向(绑定)。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">unixShmNode</span> &#123;</span></span><br><span class="line">  unixInodeInfo *pInode;     <span class="comment">/* unixInodeInfo that owns this SHM node */</span></span><br><span class="line">  sqlite3_mutex *pShmMutex;  <span class="comment">/* Mutex to access this object */</span></span><br><span class="line">  <span class="type">char</span> *zFilename;           <span class="comment">/* Name of the mmapped file */</span></span><br><span class="line">  <span class="type">int</span> hShm;                  <span class="comment">/* Open file descriptor */</span></span><br><span class="line">  <span class="type">int</span> szRegion;              <span class="comment">/* Size of shared-memory regions */</span></span><br><span class="line">  u16 nRegion;               <span class="comment">/* Size of array apRegion */</span></span><br><span class="line">  u8 isReadonly;             <span class="comment">/* True if read-only */</span></span><br><span class="line">  u8 isUnlocked;             <span class="comment">/* True if no DMS lock held */</span></span><br><span class="line">  <span class="type">char</span> **apRegion;           <span class="comment">/* Array of mapped shared-memory regions */</span></span><br><span class="line">  <span class="type">int</span> nRef;                  <span class="comment">/* Number of unixShm objects pointing to this */</span></span><br><span class="line">  unixShm *pFirst;           <span class="comment">/* All unixShm objects pointing to this */</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>下面我们分别看Sqlite的这4个接口函数</p>
+<h3 id="sqlite3OsShmMap"><a href="#sqlite3OsShmMap" class="headerlink" title="sqlite3OsShmMap"></a>sqlite3OsShmMap</h3><p>下面是shmMap原始的函数签名。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">unixShmMap</span><span class="params">(</span></span><br><span class="line"><span class="params">  sqlite3_file *fd,               <span class="comment">/* Handle open on database file */</span></span></span><br><span class="line"><span class="params">  <span class="type">int</span> iRegion,                    <span class="comment">/* Region to retrieve */</span></span></span><br><span class="line"><span class="params">  <span class="type">int</span> szRegion,                   <span class="comment">/* Size of regions */</span></span></span><br><span class="line"><span class="params">  <span class="type">int</span> bExtend,                    <span class="comment">/* True to extend file if necessary */</span></span></span><br><span class="line"><span class="params">  <span class="type">void</span> <span class="keyword">volatile</span> **pp              <span class="comment">/* OUT: Mapped memory */</span></span></span><br><span class="line"><span class="params">)</span></span><br></pre></td></tr></table></figure>
+
+<p>在sqlite中，每一个文件的映射是由一个一个region组合起来的(unixShmNode中的apRegion就是region指针的数组,nRegion就是这个数组的大小)。而unixShmMap这个函数就是获取第iRegion区域的mmap指针。其中每一个region的size是szRegion。(这个值从第一次调用之后就<strong>不可以</strong>在变了，会被存储在unixShmNode中的szRegion内)</p>
+<p>第一个参数就是需要打开shm的数据库文件对象，第二个iRegion是需要获取的区域下标，szRegion是每一个区域的大小，bExtend表示是否可以扩展文件大小，最后是返回的mmap的地址指针。</p>
+<p>sqlite设定了一个最小region size是32kb。根据上文说的，mmap是按照page size来映射文件的。一般情况下page size 在32位机器下是4k。所以，mmap一次映射最小（nShmPerMap）是1个region，但如果page size是64k，那么一次最小（nShmPerMap）就需要2个region了。</p>
+<p>函数过程：</p>
+<ol>
+<li>如果当前数据库连接的文件对象内共享文件没有打开，先打开文件。如果unixNodeInfo的pShmNode也是空的，那么将创建unixShmNode与unixNodeInfo绑定。在shm文件打开完成之后，会在shm的128个字节处加读锁。（在加读锁之前会判断是否是第一个打开该文件的进程，如果是，那么会把文件裁剪为3个字节，之所以是3个，一是出于调试的目的，二是3个字节小于shm文件的header大小，也不会影响业务逻辑）</li>
+<li>根据最小region，计算出iRegion需要映射的region数量nReqRegion。判断是否已经映射（nReqRegion&lt;unixShmNode.nRegion）,如果还没有映射，那么执行第3步，否则执行第5步</li>
+<li>判断映射文件的大小是否需要扩展，如果需要扩展，那么在扩展的文件空间对应的内存分页写入最后一个字节（下面会解释这个操作的原因）。</li>
+<li>文件扩展完成之后，按照已有的mmap的region个数（unixShmNode.nRegion）和请求的nReqRegion个数来扩展apRegion。其中考虑到一次最少分配nShmPerMap个region，再把nShmPerMap个region拆分到apRegion中</li>
+<li>返回unixShmNode.apRegion中第iRegion个region对应的mmap地址。</li>
+</ol>
+<p><strong>解释一下第三步，为什么扩展mmap文件的时候，需要在每一个分页最后写入一个字节？</strong><br>Sqlite的解释是：从技术上来说，扩展一个文件，我们只需要在文件的最后的最后一个字节，写入一个字节就可以直接扩展文件的大小了。在扩展的空间的每一个内存分页大小的最后写入一个字节，可以减少之后mmap映射区间的时候SIGBUS的概率。</p>
+<p>详细可以看 <a target="_blank" rel="noopener" href="https://www.cnblogs.com/huxiao-tee/p/4660352.html#_label5">认真分析mmap：是什么 为什么 怎么用 - 胡潇 - 博客园</a> 这篇文章最后的情景二，文件大小不是页的整倍数的情况。</p>
+<p>再加上我们上文说到的页缓存的逻辑，大致可以猜测，因为只有在真正读写文件的时候，才会触发页缓存的cache查询。而在文件的每一个分页的最后写入一个字节，会使得页缓存未命中，而触发内核从磁盘读取以及在页缓存中映射这一页对应的文件。这样就会减少在mmap系统调用之后，用户每次访问文件映射的虚拟内存引起的缺页异常，即把耗时操作集中放在了创建的时候。</p>
+<h3 id="sqlite3OsShmUnmap"><a href="#sqlite3OsShmUnmap" class="headerlink" title="sqlite3OsShmUnmap"></a>sqlite3OsShmUnmap</h3><p>下面是函数的原型：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">unixShmUnmap</span><span class="params">(</span></span><br><span class="line"><span class="params">  sqlite3_file *fd,               <span class="comment">/* The underlying database file */</span></span></span><br><span class="line"><span class="params">  <span class="type">int</span> deleteFlag                  <span class="comment">/* Delete shared-memory if true */</span></span></span><br><span class="line"><span class="params">)</span></span><br></pre></td></tr></table></figure>
+<p>顾名思义，Unmap函数的操作结果是取消映射文件，如果deleteFlag是1的话还会清空共享缓存。</p>
+<p>函数过程：</p>
+<ol>
+<li>从unixInodeInfo中找到unixShmNode，遍历unixShmNode的first指针链表，找到当前sqlite_file的unixShm，并且从链表中断开。</li>
+<li>减少unixShmNode的引用计数，如果计数到0了，那么就清空共享缓存（第三步）。</li>
+<li>按照nShmPerMap的大小调用osMunmap方法，直到释放所有的mmap缓存。</li>
+</ol>
+<h3 id="sqlite3OsShmLock"><a href="#sqlite3OsShmLock" class="headerlink" title="sqlite3OsShmLock"></a>sqlite3OsShmLock</h3><p>下面是函数原型：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">unixShmLock</span><span class="params">(</span></span><br><span class="line"><span class="params">  sqlite3_file *fd,          <span class="comment">/* Database file holding the shared memory */</span></span></span><br><span class="line"><span class="params">  <span class="type">int</span> ofst,                  <span class="comment">/* First lock to acquire or release */</span></span></span><br><span class="line"><span class="params">  <span class="type">int</span> n,                     <span class="comment">/* Number of locks to acquire or release */</span></span></span><br><span class="line"><span class="params">  <span class="type">int</span> flags                  <span class="comment">/* What to do with the lock */</span></span></span><br><span class="line"><span class="params">)</span></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">#define SQLITE_SHM_UNLOCK       1</span><br><span class="line">#define SQLITE_SHM_LOCK         2</span><br><span class="line">#define SQLITE_SHM_SHARED       4</span><br><span class="line">#define SQLITE_SHM_EXCLUSIVE    8</span><br></pre></td></tr></table></figure>
+<p>上面是shm锁的类型，也就是第4个参数flags的参数来源。UNLOCK、LOCK 和 SHARED、EXCLUSIVE分别组合，即4种组合。（其实只有unlock、shared、exclusive三种）<br><strong>与数据库文件锁不太一样，shm的锁不能由excl&lt;-&gt;shared，只能有unlock到任一锁或者任一锁到unlock。</strong></p>
+<p>与数据库文件锁一样的是，posix文件锁的特性。<br>上文中 unixShm 的数据结构中还有两个变量，分别是sharedMask和exclMask，分别表示当前这个数据库连接持有的对应shm的mmap文件锁类型。</p>
+<ol>
+<li><p>请求的锁是SQLITE_SHM_UNLOCK<br>遍历使用当前unixShmNode的unixShm链表，如果已经没有其他unixShm加锁了，就调用unixShmSystemLock真正的移除文件锁，并且移除sharedMask和exclMask的标记位。否则就只是移除标记位。</p>
+</li>
+<li><p>请求的锁是SQLITE_SHM_SHARED<br>遍历使用当前unixShmNode的unixShm链表，如果有exclusive锁，返回SQLITE_BUSY。如果当前进程内没有任何锁，就调用unixShmSystemLock在文件上加读锁，并把unixShm上的sharedMask置1。否则就只是置位。</p>
+</li>
+<li><p>请求的锁是SQLITE_SHM_EXCLUSIVE<br>遍历使用当前unixShmNode的unixShm链表，如果有其他任何在锁状态，返回SQLITE_BUSY。否则就调用unixShmSystemLock在文件上加写锁，并且在exclMask上置1。</p>
+</li>
+</ol>
+<h3 id="sqlite3OsShmBarrier"><a href="#sqlite3OsShmBarrier" class="headerlink" title="sqlite3OsShmBarrier"></a>sqlite3OsShmBarrier</h3><p>通过调用<code>__sync_synchronize()</code>函数实现的内存屏障。所有在屏障之前的代码必定会在屏障之后的代码执行之前完成执行。具体可以看后文的内存屏障相关文章。</p>
+<blockquote>
+<p>参考<br>mmap相关<br><a target="_blank" rel="noopener" href="https://www.cnblogs.com/ccxikka/p/10527056.html">各种缓存（一） - ccxikka - 博客园</a><br><a target="_blank" rel="noopener" href="https://www.cnblogs.com/huxiao-tee/p/4660352.html#_label5">认真分析mmap：是什么 为什么 怎么用 - 胡潇 - 博客园</a><br><a target="_blank" rel="noopener" href="https://blog.csdn.net/Holy_666/article/details/86532671">彻底理解mmap()</a><br>内存屏障<br><a target="_blank" rel="noopener" href="https://www.jianshu.com/p/64240319ed60">一文解决内存屏障 - 简书</a></p>
+</blockquote>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/sqlite3/" rel="tag"># sqlite3</a>
+              <a href="/tags/os/" rel="tag"># os</a>
+              <a href="/tags/shm/" rel="tag"># shm</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2020/03/15/12.compiler-autorelease-opt/" rel="prev" title="当编译优化遇上AutoRelease优化">
+                  <i class="fa fa-chevron-left"></i> 当编译优化遇上AutoRelease优化
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2020/04/01/14.gomobile-bind/" rel="next" title="解析GoMobile生成的"胶水代码"">
+                  解析GoMobile生成的"胶水代码" <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Caio</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/pace.js"></script>
+
+  
+
+
+
+
+
+</body>
+</html>

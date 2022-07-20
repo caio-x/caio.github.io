@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="zh-CH">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 6.2.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/spade-logo-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/spade-logo-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/spade-logo-next.png">
+  <link rel="mask-icon" href="/images/spade-logo-next.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.1.1/css/all.min.css" integrity="sha256-DfWjNxDkM94fVBWx1H5BMMp0Zq7luBlV8QRcSES7s+0=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pace-js@1.2.4/themes/blue/pace-theme-big-counter.css">
+  <script src="https://cdn.jsdelivr.net/npm/pace-js@1.2.4/pace.min.js" integrity="sha256-gqd7YTjg/BtfqWSwsJOvndl0Bxc8gFImLEkXQT8+qj0=" crossorigin="anonymous"></script>
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.spade-ace.tech","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.11.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":false,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="本文讨论了SQLite如何在最底层，组织数据库内容和日志文件内容。它定义了这些文件的格式。将一整个数据库文件划分为固定大小的页面，这些页面用来存储B&#x2F;B+树页面，空闲页面，和其他页面。在默认的日志模式下，日志文件将数据库页面的镜像前内容存储为日志记录；但是，在WAL日志模式式下，日志文件存储了数据库页面的更新后的镜像内容。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Storage">
+<meta property="og:url" content="https://blog.spade-ace.tech/2020/08/25/2020-08-25_db-system-design-im(storage)/index.html">
+<meta property="og:site_name" content="Spade-Ace">
+<meta property="og:description" content="本文讨论了SQLite如何在最底层，组织数据库内容和日志文件内容。它定义了这些文件的格式。将一整个数据库文件划分为固定大小的页面，这些页面用来存储B&#x2F;B+树页面，空闲页面，和其他页面。在默认的日志模式下，日志文件将数据库页面的镜像前内容存储为日志记录；但是，在WAL日志模式式下，日志文件存储了数据库页面的更新后的镜像内容。">
+<meta property="og:locale" content="zh_CH">
+<meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2020/08/XLYFMb.png">
+<meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2020/08/obFGdI.png">
+<meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2020/08/gRdkE3.png">
+<meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2020/08/4IGQSO.png">
+<meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2020/08/hhJK3N.png">
+<meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2020/08/82fzFb.png">
+<meta property="article:published_time" content="2020-08-24T16:00:00.000Z">
+<meta property="article:modified_time" content="2022-06-16T11:24:59.882Z">
+<meta property="article:author" content="Caio">
+<meta property="article:tag" content="sqlite3">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2020/08/XLYFMb.png">
+
+
+<link rel="canonical" href="https://blog.spade-ace.tech/2020/08/25/2020-08-25_db-system-design-im(storage)/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CH","comments":true,"permalink":"https://blog.spade-ace.tech/2020/08/25/2020-08-25_db-system-design-im(storage)/","path":"2020/08/25/2020-08-25_db-system-design-im(storage)/","title":"Storage"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Storage | Spade-Ace</title>
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Spade-Ace</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">Not Just an iOS Developer</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="home fa-fw"></i>Home</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E5%BA%93%E6%96%87%E4%BB%B6%E7%BB%93%E6%9E%84"><span class="nav-number">1.</span> <span class="nav-text">数据库文件结构</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%A1%B5%E9%9D%A2%E6%8A%BD%E8%B1%A1%E5%8C%96"><span class="nav-number">1.1.</span> <span class="nav-text">页面抽象化</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%A1%B5%E9%9D%A2%E5%A4%A7%E5%B0%8F"><span class="nav-number">1.2.</span> <span class="nav-text">页面大小</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%A1%B5%E9%9D%A2%E7%B1%BB%E5%9E%8B"><span class="nav-number">1.3.</span> <span class="nav-text">页面类型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E5%BA%93%E5%85%83%E6%95%B0%E6%8D%AE"><span class="nav-number">1.4.</span> <span class="nav-text">数据库元数据</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%A9%BA%E9%97%B2%E9%93%BE%E8%A1%A8%E7%9A%84%E7%BB%93%E6%9E%84"><span class="nav-number">1.5.</span> <span class="nav-text">空闲链表的结构</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%97%A5%E5%BF%97%E6%96%87%E4%BB%B6%E7%BB%93%E6%9E%84"><span class="nav-number">2.</span> <span class="nav-text">日志文件结构</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9E%E6%BB%9A%E6%97%A5%E5%BF%97%E6%96%87%E4%BB%B6"><span class="nav-number">2.1.</span> <span class="nav-text">回滚日志文件</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%89%87%E6%AE%B5%E5%A4%B4%E9%83%A8%E7%BB%93%E6%9E%84"><span class="nav-number">2.1.1.</span> <span class="nav-text">片段头部结构</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%97%A5%E5%BF%97%E8%AE%B0%E5%BD%95%E7%BB%93%E6%9E%84"><span class="nav-number">2.1.2.</span> <span class="nav-text">日志记录结构</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AF%AD%E5%8F%A5%E7%BA%A7%E6%97%A5%E5%BF%97"><span class="nav-number">2.2.</span> <span class="nav-text">语句级日志</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A4%9A%E6%95%B0%E6%8D%AE%E5%BA%93%E4%BA%8B%E5%8A%A1%E6%97%A5%E5%BF%97%EF%BC%8C%E4%B8%BB%E6%97%A5%E5%BF%97%E6%96%87%E4%BB%B6"><span class="nav-number">2.3.</span> <span class="nav-text">多数据库事务日志，主日志文件</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Caio"
+      src="/images/timg.gif">
+  <p class="site-author-name" itemprop="name">Caio</p>
+  <div class="site-description" itemprop="description">Spade-Ace&apos; Tech Blog</div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">23</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2020/08/25/2020-08-25_db-system-design-im(storage)/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/timg.gif">
+      <meta itemprop="name" content="Caio">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Spade-Ace">
+      <meta itemprop="description" content="Spade-Ace&apos; Tech Blog">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Storage | Spade-Ace">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Storage
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2020-08-25 00:00:00" itemprop="dateCreated datePublished" datetime="2020-08-25T00:00:00+08:00">2020-08-25</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2022-06-16 19:24:59" itemprop="dateModified" datetime="2022-06-16T19:24:59+08:00">2022-06-16</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/sqlite3/" itemprop="url" rel="index"><span itemprop="name">sqlite3</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <blockquote>
+<p>本文讨论了SQLite如何在最底层，组织数据库内容和日志文件内容。它定义了这些文件的格式。将一整个数据库文件划分为固定大小的页面，这些页面用来存储B&#x2F;B+树页面，空闲页面，和其他页面。在默认的日志模式下，日志文件将数据库页面的镜像前内容存储为日志记录；但是，在WAL日志模式式下，日志文件存储了数据库页面的更新后的镜像内容。</p>
+</blockquote>
+<span id="more"></span>
+
+<!---
+# 数据库命名规范
+--->
+
+<h1 id="数据库文件结构"><a href="#数据库文件结构" class="headerlink" title="数据库文件结构"></a>数据库文件结构</h1><p>除了内存数据库，SQLite将整个数据库存储在单个数据库文件中。在其生命周期中，数据库文件会增长和收缩。原生的文件系统就把这个文件当做一个普通的原始文件。它不会干涉文件的内容；它把文件内容看做字节串。它实现了读&#x2F;写的原语，以从任意偏移位置开始读&#x2F;写文件中的任意字节数。它同样也支持文件的同步(flush)操作。</p>
+<h2 id="页面抽象化"><a href="#页面抽象化" class="headerlink" title="页面抽象化"></a>页面抽象化</h2><p>为了简化空间管理以及从数据库文件读取&#x2F;写入数据，SQLite将每一个数据库文件(包括内存数据库)划分为固定大小的区域，称之为数据库页面或页面。因此，数据库文件的大小永远是页面的整数倍。页面编号从1开始线性增长。第一个页面为页面1，第二个页面为页面2，以此类推。页面0会被当做空页面，这个页面物理上也不存在。从文件偏移量0开始，第1页及其之后的页面依次线性地存储到数据库文件中，如图所示。可以把一个数据库文件看做固定大小页面的数组集合。页面号可以被用来当做访问页面的索引。(事实上Pager模块就是在原生文件系统上抽象出了一层。)</p>
+<p><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2020/08/XLYFMb.png"></p>
+<h2 id="页面大小"><a href="#页面大小" class="headerlink" title="页面大小"></a>页面大小</h2><p>默认的页面大小是1024个字节，但这是一个编译期的自定义参数，可以在编译前修改这个值。页面大小必须是2的次幂，并且范围在[512(&#x3D;2^9),65536(&#x3D;2^16)]。其中最大值的限制是2个字节的无符号整型可以表示的最大的数。一个数据库文件最多可以有(2^31-1)个页面，这个数字是被硬编码在pager.c源码的<code>PAGER_MAX_PGNO</code>宏内的。因此，一个数据库可以最大有140个TB字节，当然，这个也受到原生文件系统的限制。</p>
+<p><strong>改变页面大小</strong>:一旦一个数据库文件被创建了，SQLite就会使用编译器设定的默认页面大小。但是你可以通过执行pragma命令，在创建第一个数据库表之前修改这个值。SQLite会把这个值存储在数据库文件的元数据内，后续就会使用这个值作为数据库的页面大小了。即使以后使用针对其他默认页面大小定制的其他SQLite库，该数据库文件也可以正常工作。</p>
+<h2 id="页面类型"><a href="#页面类型" class="headerlink" title="页面类型"></a>页面类型</h2><p>不论这些页面是否正在使用，SQLite会持续跟踪所有分配给数据库文件的页面。它会在文件中存储所有的跟踪信息。(在SQLite中没有垃圾回收的机制。)基于这些用途，这些页面分为4种类型:空闲页面，树页面，指针映射页面(用于autovacuum和incremental vacuum特性)，锁页面。而树页面又分为几个子类型:叶子节点页面，内部节点页面，溢出页面。空闲页面是非活跃页面，即当前不被使用；其它的就是活动页面，并且除了指针映射页面和锁页面之外都属于B树或者B+树。B+树的内部节点页面包含搜索树的搜索导航信息。(B树的内部节点同时包含搜索信息和数据。)B+树的叶子节点存储了真正的数据(例如表中的行)。如果一行的数据太大不足以放在单个页面内，那么一部分数据存储在页面内，剩下的就会放在若干个溢出页面。</p>
+<h2 id="数据库元数据"><a href="#数据库元数据" class="headerlink" title="数据库元数据"></a>数据库元数据</h2><p>SQLite可以使用任何页面类型来表示任何一个数据库页面。1号页面是一个独例，它是B+树的内部页面，存储了<code>sqlite_master</code>或者<code>sqlite_temp_master</code>表的根节点。这个页面包含了100字节的文件头记录，从文件偏移0开始。</p>
+<p>文件头信息描述了数据库文件的结构。它定义了一些数据库的设置参数，又称元数据。SQLite会在创建文件的时候初始化这个头部。下面是这个文件头的格式，前两列都是以字节为单位。</p>
+<table>
+<thead>
+<tr>
+<th>偏移</th>
+<th>大小</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>0</td>
+<td>16</td>
+<td>头魔数”SQLite format 3”</td>
+</tr>
+<tr>
+<td>16</td>
+<td>2</td>
+<td>页面的大小</td>
+</tr>
+<tr>
+<td>18</td>
+<td>1</td>
+<td>写入的文件格式版本</td>
+</tr>
+<tr>
+<td>19</td>
+<td>1</td>
+<td>读取的文件格式版本</td>
+</tr>
+<tr>
+<td>20</td>
+<td>1</td>
+<td>每一个页面尾部的保留字节数</td>
+</tr>
+<tr>
+<td>21</td>
+<td>1</td>
+<td>最大内嵌载体占比</td>
+</tr>
+<tr>
+<td>22</td>
+<td>1</td>
+<td>最小内嵌载体占比</td>
+</tr>
+<tr>
+<td>23</td>
+<td>1</td>
+<td>最小叶子节点的载体占比</td>
+</tr>
+<tr>
+<td>24</td>
+<td>4</td>
+<td>文件变更计数器</td>
+</tr>
+<tr>
+<td>28</td>
+<td>4</td>
+<td>数据库文件的页面数量</td>
+</tr>
+<tr>
+<td>32</td>
+<td>4</td>
+<td>空闲页面链表的第一个</td>
+</tr>
+<tr>
+<td>36</td>
+<td>4</td>
+<td>文件中的空闲页面的数量</td>
+</tr>
+<tr>
+<td>40</td>
+<td>4</td>
+<td>结构缓存值</td>
+</tr>
+<tr>
+<td>44</td>
+<td>56</td>
+<td>传递给上层的14个4字节的元数据</td>
+</tr>
+</tbody></table>
+<ul>
+<li><strong>头部字符串</strong>:一个16字节的UTF-8字符串”SQLite format 3”</li>
+<li><strong>页面大小</strong>:数据库中页面的大小。这个值必须是2的n次幂，并在[512，32768]之间，或者用1表示65536。正如上面所提到的，SQLite在操作这个文件的时候就会使用这个页面大小。(对于同一个数据库连接，可以在同一个时间对不同的数据库文件使用不同的页面大小。)</li>
+<li><strong>文件格式</strong>:在偏移为18，19的位置有两个字节，用来表示文件格式的版本。在当前版本的SQLite中，它们都必须为1或2，否则将出错且无法访问数据库。值为1则对应旧版本的回滚日志(早于SQLite3.7.0)，值为2则对应WAL日志(在SQLite3.7.0版本之后)。后续有新特性，这个值会继续增加。</li>
+<li><strong>保留空间</strong>:SQLite会在每个页面的最后保留一个固定的小于255字节的空间，用用于一些其他目的。这个值会被存在偏移为20的地方，默认值是0。当数据库使用SQLite的内置（专有）加密技术时，该值不为零。每页末尾的额外字节存储一个随机数，该随机数供该页面的加密算法使用。页面的前半部分（页面大小减去保留空间大小）是存储数据库内容的可用空间，该空间必须至少为480个字节。</li>
+<li><strong>内嵌载体</strong>:最大内嵌载体占比（在偏移量21处）是页面中的可用空间总量，该空间可由标准B&#x2F;B+树内部节点的单个条目（称为单元或记录）使用。值255表示100%。<br/>该值为64（即25％):该值是为了限制最大单元大小，以便在一个节点上至少容纳四个单元。如果某个单元的有效载体大于最大值，则部分载体内容会溢出到溢出页面中。一旦SQLite分配了溢出页，它将尽可能多的字节移入溢出页，但是不会让单元大小降至最小内嵌载体占比值以下（偏移量22）。这个值为32(即12.5%)。<br/>最小叶子节点的载体占比(在偏移量23处)和最小内嵌载体占比相似，但它仅适用于B+树叶子页。该值为32(即12.5%)。叶节点的最大内嵌载体占比始终为100％（或255），因此未在头部中指定。（另外B树中没有专用叶节点。）</li>
+<li><strong>文件变更计数器</strong>:这个计数器在事务中会被使用。初始化的值是0。这个计数值，在每次被写事务写入数据库数据的时候都会递增。此值用来表示数据库何时被更改，以便pager可以清除其页面缓存。(当在文件格式使用WAL日志的时候，计数器不会被使用。)</li>
+<li><strong>数据库大小</strong>:数据库页面的数量存储在偏移量为28的位置。</li>
+<li><strong>空闲链表</strong>:数据库文件头部偏移为32的地方存储了空闲页面链表。偏移量为36的地方存储了空闲页面的总数。下一小节会细说这个空闲链表。</li>
+<li><strong>数据库结构缓存</strong>:在偏移量为40的地方存储了一个4字节的整型值，初始化为0。当数据库结构变更的时候这个值就会递增，并且在语句预处理的时候，会做一些有效性测试检查(例如表是否存在等等)。</li>
+<li><strong>其他元数据变量</strong>:在偏移量为44的地方，有14个字节的整型值，保留给Tree模块和VM模块。它们表示许多元变量的值，包括偏移量44处的结构值。（建议）页面高速缓存大小为48，自动清理的相关信息为52（0为无自动清理，否则为数据库文件中最远的根页面的页号），文本编码为56（值1表示UTF-8、2代表UTF-16 LE，3代表UTF-16 BE），用户版本号为60（不给SQLite使用，但给用户使用），增量清理模式为64（无清理为0，其他为清理值），以及版本号在偏移量92和96处；其余字节保留供将来使用，并且必须清零。</li>
+</ul>
+<p><strong>增量清理 vs. 自动清理</strong>:如果在偏移值为52处的4字节整型和在偏移值为64处的4字节整型为0；数据库文件上则没有自动清理。用户可以通过执行<code>vacuum</code>命令来手动清理。如果前者是非零，后者是零，则自动清理是打开的；否则自动清理关闭并且增量清理打开。</p>
+<p>如上所述，在1号页面中的文件头后面跟着一个B+树的内部节点。这个节点就是主目录表的根节点，名为<code>sqlite_master</code>或<code>sqlite_temp_master</code>。这个表内存储了当前数据库内的所有其他根页面页面号。因此1号页面帮助SQLite来跟踪其他的树页面或者移除页面，这也是最重要的一个页面。</p>
+<h2 id="空闲链表的结构"><a href="#空闲链表的结构" class="headerlink" title="空闲链表的结构"></a>空闲链表的结构</h2><p>数据库文件头部偏移量为32出标明了空闲页面链表。而偏移量为36处则存储了空闲链表的总数。空闲列表组织在有根的主干中，如图所示。空闲链表页面有两种类型，主干页面和叶子页面。文件头指向主干页链接列表中的第一个。每一个主干页面都指向了多个叶子页面。(叶子页面的内容是不确定的，可能是垃圾。)</p>
+<p><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2020/08/obFGdI.png"></p>
+<p>主干页面会如下结构化，从页面的最初起点开始:(1)一个4字节的页面号指向下一个主干页面(如果没有下一个就会是0)。(2)一个四字节的整型用来标明存储在这个页面上的叶子页面数量。(3)若干个四字节字节的叶子页面号。</p>
+<p>当一个页面变成非活跃状态的时候，SQLite就会将它加入到空闲链表，并且不会将它释放归还给原生文件系统。当需要添加新的信息到数据库的时候，SQLite会占据空闲链表中的页面来存储新信息。(因此说新的数据可能会存储在数据库中的任何一个地方。)如果空闲链表是空的，那么SQLite会从原生文件系统中请求新的页面，并且添加到数据库文件的尾部。</p>
+<p>在有些情况下，可能需要关心当空闲的数据库页面数量过高的时候。可以运行<code>VACUUM</code>命令来清理空闲链表，并且缩减数据库文件大小，将一些不使用的页面归还给文件系统。数据库在<code>autovacuum</code>模式下创建的话会在每一个事务提交的时候都会自动缩减数据库。虽然在事务提交之前会建立空闲页面链表，但是在事务后这个链表依旧会保持空。</p>
+<p><strong>空闲链表的清理</strong>当通过执行<code>vacuum</code>命令来清理空闲链表的时候，命令会将数据库复制到一个临时文件中。然后将这个临时数据库覆盖原始数据库，但整个过程都会在一个事务锁的保护下。</p>
+<h1 id="日志文件结构"><a href="#日志文件结构" class="headerlink" title="日志文件结构"></a>日志文件结构</h1><p>SQLite使用三种类型的日志文件，分别是回滚日志文件，语句级日志文件，和主日志文件。(这些都被称为传统日志。在SQLite3.7.0的版本中，SQLite开发着团队介绍了WAL日志结构。一个数据库文件要么是传统日志模式，要么是WAL日志模式。)接下来就会讨论传统日志的日志记录结构。</p>
+<h2 id="回滚日志文件"><a href="#回滚日志文件" class="headerlink" title="回滚日志文件"></a>回滚日志文件</h2><p>对于每一个数据库，SQLite都会维护一个回滚日志文件。(内存数据库不需要使用日志文件。它们会使用内存来存储日志信息。)回滚日志文件一般都存在和原始数据库文件的同级目录下。在默认模式下，日志文件是一个临时文件。SQLite在每一个写事务开始的时候创建日志文件，并在事务完成的时候删除文件。</p>
+<p>SQLite将每一个回滚日志文件分割为几个可变大小的日志片段，如下图所示。每个日志片段有一个片段头部，后面跟着几个日志记录。后面会详细讨论这个。</p>
+<p><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2020/08/gRdkE3.png"></p>
+<h3 id="片段头部结构"><a href="#片段头部结构" class="headerlink" title="片段头部结构"></a>片段头部结构</h3><p>下图展示了日志片段头部的结构。日志头部以8个字节开头:0xD9, 0xD5, 0x05, 0xF9, 0x20, 0xAl, 0x63, 0xD7, 也就是文件头的魔数。日志记录的数量(4字节的短整型 <code>nRec</code>)记录了当前日志片段中一共有多少个有效的日志记录。<code>nRec</code>的值对于异步事务的初始化值为-1，对于同步事务的初始化值为0。随机值部分用来计算单个日志记录的“校验和”。初始化的页面数记录记录了在当前日志开始的时候原始数据库内有多少页面数。扇区大小是数据库文件所在磁盘的磁盘扇区大小。一个片段头部的大小占据了一个完整的扇区大小。也就是说，整个片段头部大小等于在头部中记录的这个扇区大小值。页面大小就是数据库分页时的页面大小。未使用的空间为保留空间。所有整数值都是大端值。</p>
+<p><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2020/08/4IGQSO.png"></p>
+<p><strong>决定扇区大小</strong>:SQLite查询底层文件系统以获取扇区大小。（如果系统没有提供，使用512作为默认值。）SQLite假定文件系统不允许更改某个扇区上的单个字节，而是按照扇区的大小一次性读写。</p>
+<p>一个回滚日志文件通常包含单个记录片段。但是在某些场景下，它会是多个记录片段的文件，并且SQLite会在文件中多次写入片段头部。(可以看pager文章的<strong>缓存刷新</strong>一节)每次片段头部记录写入的时候，都是以扇区大小为单位。在多片段的日志文件中，任何一个片段头部的<code>nRec</code>字段都不可能是-1。</p>
+<p><strong>日志维护</strong>:在偏移为0的位置如果存在一个有效的片段头部，那么这个回滚日志也是有效的。如果文件大小是0或者包含了一个无效的片段头部，那么这个日志文件就不会用来做事务的回滚。</p>
+<p><strong>异步日志</strong>:SQLite支持异步事务，比通常的同步事务快很多。异步事务不会在任何时候刷新日志文件或者数据库文件，日志文件只有一个日志片段，<code>nRec</code>永远是-1，实际值是从文件大小中得出的。SQLite不建议使用异步事务，但是你依旧可以使用<code>pragma</code>命令来开启异步事务。这个模式一般用在开发阶段，用来减少开发调试时间的。同时也满足测试应用，因为一些应用无需测试数据恢复的case。</p>
+<h3 id="日志记录结构"><a href="#日志记录结构" class="headerlink" title="日志记录结构"></a>日志记录结构</h3><p>当前事务的非select的语句会产生日志记录。SQLite在页面的粒度上，使用旧值记录技术。在首次修改任何一个页面的时候，就会将原始的页面数据，包括页面号，作为一个新的日志记录写入日志文件。下图描述了一个单独的日志记录的结构。日志记录还包含了一个4字节32位的校验和。校验和覆盖了页面号和页面数据镜像。在日志片段头部的4字节32位的随机数，用来作为校验和的秘钥。随机数很重要，因为出现在日志末尾的垃圾数据很可能是曾经存在于其他文件中的数据，而这些文件现在已被删除。如果垃圾数据来自过时的日志文件，校验和也有可能是正确的。但是，针对不同日志文件通过将校验和初始化为不同的随机值，SQLite可以最大程度地降低这种风险。</p>
+<p><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2020/08/hhJK3N.png"></p>
+<p><strong>校验和的位置</strong>:可以注意到，页面号存储在日志记录的头部，而校验和存储在日志记录的尾部。这个设定很重要。SQLite的开发者假定了文件中的数据作为字节字符串按扇区线性写入。所以如果日志文件因为断电发生了不一致错误，那么大概率场景是后面的校验和不一致。几乎不可能会出现两头一致，中间不一致的情况。因此，这个校验和的结构，仅管简单粗暴，但是已经涵盖了大部分的场景。</p>
+<h2 id="语句级日志"><a href="#语句级日志" class="headerlink" title="语句级日志"></a>语句级日志</h2><p>在一个用户事务中，SQLite为每一个最新的写操作语句的维护了一个语句级的子日志，而这些语句有可能会修改多行数据，也有可能会导致约束冲突，或者在触发器内抛出异常。日志文件会在这些语句执行过程中被用来恢复数据库。语句日志是一个单独的，原始的回滚日志文件。它是一个任意命名的临时文件（以etilqs_为前缀）。它位于用于临时文件的本地目录中。崩溃恢复操作不需要该文件；仅在语句中止时才需要。当语句执行完成的时候，这个文件就会被SQLite删除。这个日志文件没有片段头部记录。语句执行开始时，<code>nRec</code>（日志记录数）值保留在内存数据结构中，数据库文件大小也会被保留。这些日志记录没有校验和。</p>
+<p><strong>语句级日志的持久化</strong>:语句执行结束时，将删除语句日志文件。但是，为了要实现SAVEPOINT，SQLite会保留语句日志，直到释放保存点或提交用户事务为止。</p>
+<h2 id="多数据库事务日志，主日志文件"><a href="#多数据库事务日志，主日志文件" class="headerlink" title="多数据库事务日志，主日志文件"></a>多数据库事务日志，主日志文件</h2><p>一个应用可以通过执行<code>ATTACH</code>命令，打开多个额外的数据库。在这个场景下，SQLite允许用户事务读和修改多个数据库。如果事务修改了多个数据库，那么这些数据库会有自己的回滚日志文件。它们将会是独立的回滚日志文件，并且相互透明。这一类事务会对每一个更新的数据库单独提交事务。因此这个事务可能就不是全局原子的。为了让一个多数据库事务全局原子，SQLite额外的维护了一个单独的交叉日志，称之为主日志文件。这个日志文件不是用来回滚数据的。相反，它包含了参与事务的所有UTF-8格式的独立回滚日志的名字。(在本节上下文内，回滚日志被称为子回滚日志。)子回滚日志的名字是全路径名，并且被空字符相隔开。主数据库日志文件，会和主数据库文件在同一个目录下，并且后面会跟随’-mj’，以及8个随机的16进制数。这是一个临时文件，在事务开始尝试提交的时候创建，在事务完成的时候删除。事务中止不会创建主日志文件。</p>
+<p>每一个子日志文件同样也包含主日志文件的全路径名(看下图)。正如图中所示，主回滚日志记录跟在子日志记录的最后，这会在事务完成的时候写入。这个记录也会对齐扇区大小。校验和字段存储了主回滚日志文件名的校验和。长度字段指定了这个主回滚日志文件名的长度。主回滚日志文件名会以UTF-8的编码格式存储，包含了最后的终止符。禁用页号，是包含锁的字节偏移数。SQLite不会使用这个页面，它是保留用来兼容windows和类POSIX的问题(这个可以看原生锁相关部分)。</p>
+<p><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2020/08/82fzFb.png"></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/sqlite3/" rel="tag"># sqlite3</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2020/08/21/2020-08-21_db-system-design-imp(Transaction)/" rel="prev" title="Transaction Management">
+                  <i class="fa fa-chevron-left"></i> Transaction Management
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2020/08/29/2020-08-29_db_system_design_imp(WAL)/" rel="next" title="WAL Mode">
+                  WAL Mode <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Caio</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/pace.js"></script>
+
+  
+
+
+
+
+
+</body>
+</html>
