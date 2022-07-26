@@ -2,6 +2,7 @@
 title: WAL Mode
 date: 2020-08-29
 tags: [sqlite3]
+top: 300
 categories: sqlite3
 ---
 

@@ -41,7 +41,6 @@ public void buildTree(int[] datas, int[] tree, int start, int end, int node_idx)
     buildTree(datas, nodes, mid + 1, end, right_node_idx);
 
     nodes[node_idx] = nodes[left_node_idx] + nodes[right_node_idx]; // fun(nodes[left_nodeIdx], nodes[right_nodeIdx]);
-    
 }
 ```
 
@@ -93,5 +92,11 @@ public void updateTree(int[] tree, int start, int end, int node_idx, int idx, in
     
     tree[node_idx] = tree[left_node_idx] + tree[right_node_idx];
 }
+```
+
+#### 懒标记
+
+```java
+
 ```
 ## 实例

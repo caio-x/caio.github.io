@@ -2,6 +2,7 @@
 title: The Pager Module
 date: 2020-08-17
 tags: [sqlite3]
+top: 300
 categories: sqlite3
 ---
 

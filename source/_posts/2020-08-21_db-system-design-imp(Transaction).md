@@ -2,6 +2,7 @@
 title: Transaction Management
 date: 2020-08-21
 tags: [sqlite3]
+top: 300
 categories: sqlite3
 ---
 
