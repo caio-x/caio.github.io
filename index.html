@@ -206,6 +206,282 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2020/03/15/12.compiler-autorelease-opt/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/timg.gif">
+      <meta itemprop="name" content="Caio">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Spade-Ace">
+      <meta itemprop="description" content="Spade-Ace&apos; Tech Blog">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="undefined | Spade-Ace">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/2020/03/15/12.compiler-autorelease-opt/" class="post-title-link" itemprop="url">当编译优化遇上AutoRelease优化</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2020-03-15 00:00:00" itemprop="dateCreated datePublished" datetime="2020-03-15T00:00:00+08:00">2020-03-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2022-07-26 18:48:57" itemprop="dateModified" datetime="2022-07-26T18:48:57+08:00">2022-07-26</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/object-c/" itemprop="url" rel="index"><span itemprop="name">object-c</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>最近在复习自动释放池，在ARC下runtime有一个优化<code>objc_autoreleaseReturnValue</code>和<code>objc_retainAutoreleaseReturnValue</code>，但是优化遇上编译器优化，似乎有点问题…不知道算不算苹果自己给自己挖的坑。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2020/03/15/12.compiler-autorelease-opt/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2019/12/21/5.OC-Block-imp/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/timg.gif">
+      <meta itemprop="name" content="Caio">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Spade-Ace">
+      <meta itemprop="description" content="Spade-Ace&apos; Tech Blog">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="undefined | Spade-Ace">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/2019/12/21/5.OC-Block-imp/" class="post-title-link" itemprop="url">老生常谈，oc block的实现</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2019-12-21 00:00:00" itemprop="dateCreated datePublished" datetime="2019-12-21T00:00:00+08:00">2019-12-21</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2022-07-26 18:47:28" itemprop="dateModified" datetime="2022-07-26T18:47:28+08:00">2022-07-26</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E8%AF%AD%E6%B3%95%E7%B3%96/" itemprop="url" rel="index"><span itemprop="name">语法糖</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <h2 id="Block是什么？"><a href="#Block是什么？" class="headerlink" title="Block是什么？"></a>Block是什么？</h2><p>一般来说OC上的语法糖，都可以使用 <code>clang --rewrite-objc code.m</code> 让clang 编译为 c 或 c++ ，由此可以窥探这些语法糖的具体实现。例如，oc的block，@autoreleasepool，<a target="_blank" rel="noopener" href="https://caio.ink/article-for-synchronized/">@synchronized</a>等等</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2019/12/21/5.OC-Block-imp/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2019/12/20/2019-12-20_synchronized/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/timg.gif">
+      <meta itemprop="name" content="Caio">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Spade-Ace">
+      <meta itemprop="description" content="Spade-Ace&apos; Tech Blog">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="undefined | Spade-Ace">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/2019/12/20/2019-12-20_synchronized/" class="post-title-link" itemprop="url">oc中@synchronized的性能瓶颈</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2019-12-20 00:00:00" itemprop="dateCreated datePublished" datetime="2019-12-20T00:00:00+08:00">2019-12-20</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2022-07-26 18:50:22" itemprop="dateModified" datetime="2022-07-26T18:50:22+08:00">2022-07-26</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E8%AF%AD%E6%B3%95%E7%B3%96/" itemprop="url" rel="index"><span itemprop="name">语法糖</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <h2 id="synchronized是什么？"><a href="#synchronized是什么？" class="headerlink" title="@synchronized是什么？"></a>@synchronized是什么？</h2><p>一般来说OC上的语法糖，都可以使用 <code>clang --rewrite-objc code.m</code> 让clang 编译为 c 或 c++ ，由此可以窥探这些语法糖的具体实现(但是实际上XCode在编译的时候，并不会有rewrite的这个过程)。例如，<a target="_blank" rel="noopener" href="https://caio.ink/oc-block-imp/">oc的block</a>，@autoreleasepool，@synchronized等等</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2019/12/20/2019-12-20_synchronized/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
     <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2020/08/29/2020-08-29_db_system_design_imp(WAL)/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -242,7 +518,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">Edited on</span>
-      <time title="Modified: 2022-06-16 19:24:59" itemprop="dateModified" datetime="2022-06-16T19:24:59+08:00">2022-06-16</time>
+      <time title="Modified: 2022-07-26 18:50:54" itemprop="dateModified" datetime="2022-07-26T18:50:54+08:00">2022-07-26</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -334,7 +610,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">Edited on</span>
-      <time title="Modified: 2022-06-16 19:24:59" itemprop="dateModified" datetime="2022-06-16T19:24:59+08:00">2022-06-16</time>
+      <time title="Modified: 2022-07-26 18:50:50" itemprop="dateModified" datetime="2022-07-26T18:50:50+08:00">2022-07-26</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -428,7 +704,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">Edited on</span>
-      <time title="Modified: 2022-06-16 19:24:59" itemprop="dateModified" datetime="2022-06-16T19:24:59+08:00">2022-06-16</time>
+      <time title="Modified: 2022-07-26 18:50:46" itemprop="dateModified" datetime="2022-07-26T18:50:46+08:00">2022-07-26</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -522,7 +798,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">Edited on</span>
-      <time title="Modified: 2022-06-16 19:24:59" itemprop="dateModified" datetime="2022-06-16T19:24:59+08:00">2022-06-16</time>
+      <time title="Modified: 2022-07-26 18:50:41" itemprop="dateModified" datetime="2022-07-26T18:50:41+08:00">2022-07-26</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -616,7 +892,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">Edited on</span>
-      <time title="Modified: 2022-06-16 19:24:59" itemprop="dateModified" datetime="2022-06-16T19:24:59+08:00">2022-06-16</time>
+      <time title="Modified: 2022-07-26 18:49:55" itemprop="dateModified" datetime="2022-07-26T18:49:55+08:00">2022-07-26</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -710,7 +986,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">Edited on</span>
-      <time title="Modified: 2022-06-16 19:24:59" itemprop="dateModified" datetime="2022-06-16T19:24:59+08:00">2022-06-16</time>
+      <time title="Modified: 2022-07-26 18:49:43" itemprop="dateModified" datetime="2022-07-26T18:49:43+08:00">2022-07-26</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -804,7 +1080,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">Edited on</span>
-      <time title="Modified: 2022-06-16 19:24:59" itemprop="dateModified" datetime="2022-06-16T19:24:59+08:00">2022-06-16</time>
+      <time title="Modified: 2022-07-26 18:49:39" itemprop="dateModified" datetime="2022-07-26T18:49:39+08:00">2022-07-26</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -830,290 +1106,6 @@
           <!--noindex-->
             <div class="post-button">
               <a class="btn" href="/2020/06/29/18.db-system-design-imp(VM)/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2020/06/12/17.inside-sqlite-chapter-6/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/timg.gif">
-      <meta itemprop="name" content="Caio">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Spade-Ace">
-      <meta itemprop="description" content="Spade-Ace&apos; Tech Blog">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="undefined | Spade-Ace">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/2020/06/12/17.inside-sqlite-chapter-6/" class="post-title-link" itemprop="url">SQLite引擎</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">Posted on</span>
-
-      <time title="Created: 2020-06-12 00:00:00" itemprop="dateCreated datePublished" datetime="2020-06-12T00:00:00+08:00">2020-06-12</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar-check"></i>
-      </span>
-      <span class="post-meta-item-text">Edited on</span>
-      <time title="Modified: 2022-06-16 19:24:59" itemprop="dateModified" datetime="2022-06-16T19:24:59+08:00">2022-06-16</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">In</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/sqlite3/" itemprop="url" rel="index"><span itemprop="name">sqlite3</span></a>
-        </span>
-    </span>
-
-  
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <blockquote>
-<p>source: inside-sqlite</p>
-</blockquote>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2020/06/12/17.inside-sqlite-chapter-6/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2020/04/19/15.Sqlite-OS/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/timg.gif">
-      <meta itemprop="name" content="Caio">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Spade-Ace">
-      <meta itemprop="description" content="Spade-Ace&apos; Tech Blog">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="undefined | Spade-Ace">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/2020/04/19/15.Sqlite-OS/" class="post-title-link" itemprop="url">SQLite--OS</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">Posted on</span>
-
-      <time title="Created: 2020-04-19 00:00:00" itemprop="dateCreated datePublished" datetime="2020-04-19T00:00:00+08:00">2020-04-19</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar-check"></i>
-      </span>
-      <span class="post-meta-item-text">Edited on</span>
-      <time title="Modified: 2022-06-16 19:24:59" itemprop="dateModified" datetime="2022-06-16T19:24:59+08:00">2022-06-16</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">In</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/sqlite3/" itemprop="url" rel="index"><span itemprop="name">sqlite3</span></a>
-        </span>
-    </span>
-
-  
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <blockquote>
-<p>自底向上看sqlite的时候发现自己欠缺和遗忘了好多知识（尤其是操作系统）。如果能把这个sqlite的系列都写完的话，在操作系统上，尤其是文件和内存管理上能有不少的知识复习和提升 :)。</p>
-</blockquote>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2020/04/19/15.Sqlite-OS/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2020/04/01/14.gomobile-bind/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/timg.gif">
-      <meta itemprop="name" content="Caio">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Spade-Ace">
-      <meta itemprop="description" content="Spade-Ace&apos; Tech Blog">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="undefined | Spade-Ace">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/2020/04/01/14.gomobile-bind/" class="post-title-link" itemprop="url">解析GoMobile生成的"胶水代码"</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">Posted on</span>
-
-      <time title="Created: 2020-04-01 00:00:00" itemprop="dateCreated datePublished" datetime="2020-04-01T00:00:00+08:00">2020-04-01</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar-check"></i>
-      </span>
-      <span class="post-meta-item-text">Edited on</span>
-      <time title="Modified: 2022-06-16 19:24:59" itemprop="dateModified" datetime="2022-06-16T19:24:59+08:00">2022-06-16</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">In</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/GoMobile/" itemprop="url" rel="index"><span itemprop="name">GoMobile</span></a>
-        </span>
-    </span>
-
-  
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <blockquote>
-<p>标题要唬人…在做Golang跨平台的时候，使用gomobile bind -target&#x3D;ios xxx 就可以生成对应平台的framework。</p>
-</blockquote>
-<p>本文讨论的内容是Golang是如何实现了OC和Go的数据通讯与接口调用，以及如何做到让开发者无感知的从OC对象的引用计数切换到Golang的垃圾回收机制。</p>
-<p>其实Go的语言层面的通讯实际上是由bind生成的中间层的代码来实现的，什么是中间层的代码？我们简单做实验…</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2020/04/01/14.gomobile-bind/#more" rel="contents">
                 Read more &raquo;
               </a>
             </div>

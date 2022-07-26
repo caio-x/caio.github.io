@@ -22,12 +22,12 @@
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"blog.spade-ace.tech","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.11.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":false,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"}}</script><script src="/js/config.js"></script>
 
-    <meta name="description" content="Linux的共享库的重定位和符号绑定动态共享库在进程间共享时，有两种符号链接方式：  装载时重定位 PIC（位置无关代码）  装载时重定位在首次使用某个动态库的时候，动态链接器会把磁盘上的这个库文件，映射到某块物理内存上。 在此之后，动态链接器加载动态库的时候，会根据当前内存的情况，分配对应的一块虚拟内存来映射这个动态库。所以不论有多少进程在使用这个动态库，物理内存中这个动态库始终只有一份。 然后">
+    <meta name="description" content="Linux的共享库的重定位和符号绑定动态共享库在进程间共享时，有两种符号链接方式：  装载时重定位 PIC（位置无关代码）">
 <meta property="og:type" content="article">
 <meta property="og:title" content="动态库的符号地址绑定">
 <meta property="og:url" content="https://blog.spade-ace.tech/2019/12/17/3.binding-symbols/index.html">
 <meta property="og:site_name" content="Spade-Ace">
-<meta property="og:description" content="Linux的共享库的重定位和符号绑定动态共享库在进程间共享时，有两种符号链接方式：  装载时重定位 PIC（位置无关代码）  装载时重定位在首次使用某个动态库的时候，动态链接器会把磁盘上的这个库文件，映射到某块物理内存上。 在此之后，动态链接器加载动态库的时候，会根据当前内存的情况，分配对应的一块虚拟内存来映射这个动态库。所以不论有多少进程在使用这个动态库，物理内存中这个动态库始终只有一份。 然后">
+<meta property="og:description" content="Linux的共享库的重定位和符号绑定动态共享库在进程间共享时，有两种符号链接方式：  装载时重定位 PIC（位置无关代码）">
 <meta property="og:locale" content="zh_CH">
 <meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/2019121711225490-300x280.png">
 <meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/2019121711250179-300x154.png">
@@ -44,7 +44,7 @@
 <meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/099695463b49a2eb7f6f2972f6ceb739.png">
 <meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/826557c3c1e53c4da1529fbfe29dc6ed.png">
 <meta property="article:published_time" content="2019-12-16T16:00:00.000Z">
-<meta property="article:modified_time" content="2022-06-16T11:24:59.883Z">
+<meta property="article:modified_time" content="2022-07-26T10:47:05.029Z">
 <meta property="article:author" content="Caio">
 <meta property="article:tag" content="动态链接">
 <meta property="article:tag" content="符号绑定">
@@ -263,7 +263,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">Edited on</span>
-      <time title="Modified: 2022-06-16 19:24:59" itemprop="dateModified" datetime="2022-06-16T19:24:59+08:00">2022-06-16</time>
+      <time title="Modified: 2022-07-26 18:47:05" itemprop="dateModified" datetime="2022-07-26T18:47:05+08:00">2022-07-26</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -290,6 +290,8 @@
 <li>装载时重定位</li>
 <li>PIC（位置无关代码）</li>
 </ol>
+<span id="more"></span>
+
 <h3 id="装载时重定位"><a href="#装载时重定位" class="headerlink" title="装载时重定位"></a>装载时重定位</h3><p>在首次使用某个动态库的时候，动态链接器会把磁盘上的这个库文件，映射到某块物理内存上。</p>
 <p>在此之后，动态链接器加载动态库的时候，会根据当前内存的情况，分配对应的一块虚拟内存来映射这个动态库。所以不论有多少进程在使用这个动态库，物理内存中这个动态库始终只有一份。</p>
 <p>然后…因为载入后不同进程的基地址不同，加上动态库内都是绝对寻址，所以需要修改动态库TEXT段内的指令。</p>
