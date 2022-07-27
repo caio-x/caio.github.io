@@ -77,6 +77,16 @@ https://www.ccppcoding.com/archives/221 指令乱序一节
 ### 总结
 
 
+https://www.huliujia.com/blog/df3c2e8a9ef77bd2ed0d83292778734eb395970c/
+https://www.huliujia.com/blog/f85f72a3b3e3018ffe9c9d3c15dda0f5db079859/
+https://www.ccppcoding.com/archives/221
+https://paul.pub/cpp-memory-model/
+
+https://colobu.com/2014/12/19/an-introduction-to-lock-free-programming/
+
+shared_ptr:
+https://stackoverflow.com/questions/14881056/confusion-about-implementation-error-within-shared-ptr-destructor
+https://stackoverflow.com/questions/49112732/memory-order-in-shared-pointer-destructor
 
 ### 内存模型
 
