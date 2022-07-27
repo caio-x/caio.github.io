@@ -5,9 +5,78 @@ tags: [C++]
 categories: C++
 ---
 
+本文主要讨论了C++在原子操作上的内存模型以及内存排序标准。
+
 **相对**来说，C++已经是比较接近系统底层的语言了，C++设计也是希望如此，毕竟它本身已经如此复杂了。在C++ 11的标准里，推出了非常多的新特性，它们让C++变得非常灵活，而它们都依赖于标准里的多线程内存模型。但可能大部分的开发者都不知道这些，因为一般情况下，他们只需要通过mutex这一类高级的同步锁，来在多线程下解决数据竞争问题。至于这些锁是如何实现的，对他们来说并不重要。但是如果要接触到更底层的原理，或需要编写`lock-free`数据结构，亦或者是需要做更高性能的优化时，那么我们就需要理解这些更接近「机器语言」的数据结构和设计。有时候，一些原子类型或者原子操作，甚至可以让代码缩减到只有1-2个CPU指令。
 
 <!-- more -->
+
+## 为什么会有这篇文章
+
+最近在阅读`objc-block`代码，其中C++实现的 objc-block-trampolines.mm 部分，有一个`lock-free`的设计，下面剔除了无关的代码之后的核心源码部分。
+
+``` cpp
+// fixme C++ compilers don't implemement memory_order_consume efficiently.
+// Use memory_order_relaxed and cross our fingers.
+#define MEMORY_ORDER_CONSUME std::memory_order_relaxed
+
+struct TrampolinePointers {
+    std::atomic<TrampolinePointers *> trampolines{nil};
+
+    TrampolinePointers *get() {
+        return trampolines.load(MEMORY_ORDER_CONSUME);
+    }
+
+public:
+    void Initialize() {
+        if (get()) return;
+
+        // This code may be called concurrently.
+        // In the worst case we perform extra dyld operations.
+        void *dylib = dlopen("./libobjc-trampolines.dylib",
+                             RTLD_NOW | RTLD_LOCAL | RTLD_FIRST);
+        if (!dylib) {
+            _objc_fatal("couldn't dlopen libobjc-trampolines.dylib: %s",
+                        dlerror());
+        }
+
+        auto t = new TrampolinePointers(dylib);
+        TrampolinePointers *old = nil;
+        if (! trampolines.compare_exchange_strong(old, t, memory_order_release))
+        {
+            delete t;  // Lost an initialization race.
+        }
+    }
+};
+```
+
+这段代码摘自`objc`源码中的block实现部分，具体代码在 objc-block-trampolines.mm 内。
+
+代码实现了一个无锁的单例，单例对象为`trampolines`。其中`get()`和`Initialize()`函数是可以多线程并发执行的。
+
+`get()`无需解释，直接返回当前的单例对象，读操作，在多线程下本身也没什么问题。（PS：这种设计下单例，是**有可能**为空的）
+
+`Initialize()`是一个双判初始化操作，其中关键代码是`trampolines.compare_exchange_strong(old, t, memory_order_release)`：
+
+它将`trampolines`变量和`old`变量相比较，如果相等，那么就让`t`「替换」掉`trampolines`。最核心的一点，它是一个**原子操作**。虽然`Initialize()`函数可以有多线程并发执行，但是`compare_exchange_strong()`函数同时只有一个线程可以执行。
+
+假设当前有两个线程在同时执行，在第一个线程将`trampolines`通过`compare_exchange_strong()`赋值后，第二个线程`compare_exchange_strong()`判断一定会返回false，所以第二个线程需要释放预先创建的`t`。
+
+代码似乎可以解释，但是其中的`memory_order_release`和`MEMORY_ORDER_CONSUME(memory_order_relaxed)`是用来做什么的？
+
+## 指令乱序
+
+https://www.ccppcoding.com/archives/221 指令乱序一节
+
+## 内存模型
+
+### 为什么会有内存模型
+
+### 三种内存模型
+
+### 总结
+
+
 
 ### 内存模型
 
