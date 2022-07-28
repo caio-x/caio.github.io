@@ -206,7 +206,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2019/12/17/3.binding-symbols/">
+    <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2019/12/21/6.leetcode32/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/timg.gif">
@@ -224,7 +224,7 @@
     </span>
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
-          <a href="/2019/12/17/3.binding-symbols/" class="post-title-link" itemprop="url">动态库的符号地址绑定</a>
+          <a href="/2019/12/21/6.leetcode32/" class="post-title-link" itemprop="url">最长有效括号 -- LeetCode[32]</a>
         </h2>
 
         <div class="post-meta-container">
@@ -235,14 +235,14 @@
       </span>
       <span class="post-meta-item-text">Posted on</span>
 
-      <time title="Created: 2019-12-17 00:00:00" itemprop="dateCreated datePublished" datetime="2019-12-17T00:00:00+08:00">2019-12-17</time>
+      <time title="Created: 2019-12-21 00:00:00" itemprop="dateCreated datePublished" datetime="2019-12-21T00:00:00+08:00">2019-12-21</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">Edited on</span>
-      <time title="Modified: 2020-08-29 22:42:58" itemprop="dateModified" datetime="2020-08-29T22:42:58+08:00">2020-08-29</time>
+      <time title="Modified: 2022-06-16 19:24:59" itemprop="dateModified" datetime="2022-06-16T19:24:59+08:00">2022-06-16</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -250,7 +250,7 @@
       </span>
       <span class="post-meta-item-text">In</span>
         <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/%E5%8A%A8%E6%80%81%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">动态库</span></a>
+          <a href="/categories/%E7%AE%97%E6%B3%95/" itemprop="url" rel="index"><span itemprop="name">算法</span></a>
         </span>
     </span>
 
@@ -264,99 +264,17 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <h2 id="Linux的共享库的重定位和符号绑定"><a href="#Linux的共享库的重定位和符号绑定" class="headerlink" title="Linux的共享库的重定位和符号绑定"></a>Linux的共享库的重定位和符号绑定</h2><p>动态共享库在进程间共享时，有两种符号链接方式：</p>
-<ol>
-<li>装载时重定位</li>
-<li>PIC（位置无关代码）</li>
-</ol>
-<h3 id="装载时重定位"><a href="#装载时重定位" class="headerlink" title="装载时重定位"></a>装载时重定位</h3><p>在首次使用某个动态库的时候，动态链接器会把磁盘上的这个库文件，映射到某块物理内存上。</p>
-<p>在此之后，动态链接器加载动态库的时候，会根据当前内存的情况，分配对应的一块虚拟内存来映射这个动态库。所以不论有多少进程在使用这个动态库，物理内存中这个动态库始终只有一份。</p>
-<p>然后…因为载入后不同进程的基地址不同，加上动态库内都是绝对寻址，所以需要修改动态库TEXT段内的指令。</p>
-<p>所以最终动态库内的寻址地址都是由动态库被加载的虚拟内存的基地址来决定的，而不同进程的基地址必然不会一样，那最终导致这部分的代码不可复用。</p>
-<p>另外，如果这部分的寻址过多，还容易引起链接时间过长（启动时间过久）。</p>
-<p>再另外，TEXT段的可写入，使得安全性的大大降低。</p>
-<p>由此引入了PIC</p>
-<h3 id="PIC（位置无关代码）"><a href="#PIC（位置无关代码）" class="headerlink" title="PIC（位置无关代码）"></a>PIC（位置无关代码）</h3><p>PIC实际上需要解决两个问题，一个是寻址问题，另一个是绑定问题。解决这两个问题，至少可以缓解以上的所有问题。</p>
-<ol>
-<li>寻址问题</li>
-</ol>
-<p>如果可以把绝对地址寻址改为相对地址寻址，那么也就不需要根据基地址来修改TEXT段的指令了。</p>
-<p>在此之前，相对地址有两个要素 基址+偏移。</p>
-<p>先看偏移，编译器可以把所有的TEXT段和DATA段分离（即使不放在一起也没关系）。当前指令需要的数据与指令的偏移，与编译器是可以确定的。</p>
-<p>即在链接器链接的时候，也是可以知道，当前指令需要的数据在此之后偏移多少。具体看下图：<br><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/2019121711225490-300x280.png"></p>
-<p>再看基址，基址可以通过一些“手段”获取到。</p>
-<p>例如在x86上，</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">    call TMPLABEL</span><br><span class="line">TMPLABEL:</span><br><span class="line">    pop ebx</span><br></pre></td></tr></table></figure>
-
-<p>call TMPLABEL 调用的时候，会把TMPLABEL的第一个命令地址（即 pop ebx）的地址入栈。而执行到当前命令的时候，又会弹出栈顶的值到ebx，那么此时ebx代表的就是当前的指令的地址了。</p>
-<ol start="2">
-<li>绑定问题</li>
-</ol>
-<p>在做到相对寻址之后，如何把对应的符号绑定到对应真正的符号上？这里引入了GOT（全局偏移表）。GOT是一张全局的地址表，记录了指令内使用的符号或者数据的具体地址。</p>
-<p>寻址访问的过程中，TEXT段中某一个指令想要访问某一个全局数据的地址，(姑且叫使用全局数据A吧)TEXT段不会直接访问这个数据A的地址。而是编译器在会把这个地址，指向GOT中的某一个记录，这个记录就是数据A的地址，这样通过相对寻址来指向这个数据。</p>
-<p>但是这个过程中，还缺少一步就是对GOT表的重定向，因为数据在动态库被加载至虚拟内存的时才会被确定基地址。所以，在加载后，还需要通过重定向来修改这个数据的地址。</p>
-<p>似乎过程比装载时重定位一点都没有少，那么PIC的优势又在哪呢？</p>
-<ol>
-<li>PIC可以复用的GOT表。装载时重定位需要对所有的引用这个符号或者数据的地方都做指令修改，而PIC只需要修改GOT表一次就可以了。</li>
-<li>PIC无需修改代码段。上文提及的修改代码段是及其危险的一件事，而数据段本身也不是进程间共享的，PIC可以做到只修改数据段。而且这样可以让代码段在进程间共享。</li>
-</ol>
-<h3 id="PIC函数调用时延迟绑定"><a href="#PIC函数调用时延迟绑定" class="headerlink" title="PIC函数调用时延迟绑定"></a>PIC函数调用时延迟绑定</h3><p>PIC解决了以上两个问题，但是还有一个启动时间的问题。虽然PIC只需要修改一次GOT的地址就可以了，但是还是架不住函数多啊，函数的数量肯定远多于全局变量的数量。</p>
-<p>程序80%的时间都在执行20%的代码</p>
-<p>所以，函数地址的重定位可以延迟到第一次调用的时候。</p>
-<p>另外，对于函数的地址的解析，我们称为绑定（Bind）。</p>
-<p>通俗的来说，延迟绑定的机制就是：</p>
-<p>编译器在代码段中，插入一段“桩代码”，源代码指令中的函数跳转会通过相对寻址，直接指向PLT表中这个符号对应的桩代码。这段“桩代码”的执行过是：</p>
-<ol>
-<li>执行”桩代码”,先跳转到GOT表中这个符号指向的函数地址.</li>
-<li>编译器会把GOT表中这个地址的默认值写为“桩代码”中的下一个指令地址。即跳转回桩代码中的下一条指令。</li>
-<li>而下一个指令地址就是执行GOT表中这个符号的绑定过程（一般都由动态链接器负责）</li>
-</ol>
-<p>这个桩代码，称为PLT(程序链接表)。具体的流程看下图：<br><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/2019121711250179-300x154.png"></p>
-<p>等到下一次再执行的时候，GOT表内的符号地址已经是真正函数对应的地址了（Bind过程就是把GOT表中的符号地址替换为真正的函数地址）：</p>
-<p><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/201912171125358-300x184.png"></p>
-<h2 id="iOS动态库的符号"><a href="#iOS动态库的符号" class="headerlink" title="iOS动态库的符号"></a>iOS动态库的符号</h2><p>接下来，我们通过代码和实现来看看iOS的动态库是否和Linux的动态库一样。</p>
-<p>写一个简单Demo，看看NSLog的符号绑定吧。</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">@interface ViewController ()</span><br><span class="line">@end</span><br><span class="line"></span><br><span class="line">@implementation ViewController</span><br><span class="line">- (void)viewDidLoad &#123;</span><br><span class="line">    [super viewDidLoad];</span><br><span class="line">    // Do any additional setup after loading the view.</span><br><span class="line">    NSLog(@&quot;1&quot;);</span><br><span class="line">    NSLog(@&quot;2&quot;);</span><br><span class="line">&#125;</span><br><span class="line">@end</span><br></pre></td></tr></table></figure>
-
-<h3 id="静态分析"><a href="#静态分析" class="headerlink" title="静态分析"></a>静态分析</h3><p>编译完成后，因为代码量不多，我们先做静态分析。</p>
-<p>在 __TEXT 段的 __text 节中所有代码可以一眼望到底了。</p>
-<p><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/2995f8ee2c76a2b85054185cc0fe56c4.png"></p>
-<p>迅速找到第一个NSLog，这里bl 跳转到 0x100006558。（第二个NSLog也是跳转到这个地址）</p>
-<p>那找到偏移为0x6558的地址（Text段的虚拟地址起始地址是0x100000000,在Load Commands中声明了）。</p>
-<p>0x6558是在__TEXT段的__stubs节中，顾名思义是符号桩。根据上面Linux的动态库的理解，符号桩是一个假想的NSLog的实现，所有的指令都会向这个地址跳转。</p>
-<p>但是很僵硬…MachOView这个工具把某些细节汇编隐藏了。<br><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/e401b01710523114905587681e611b87.png"></p>
-<p>我们换个工具…<br><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/8fd0ad5d02a843cfe7f22f291972a7bd.png"></p>
-<p>找到__stubs节，第一个符号就是imp__sthubs_NSLog。</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ldr x16，#0x10000c000</span><br><span class="line">bl x16</span><br></pre></td></tr></table></figure>
-<p>这个假想的NSLog实现就是跳转到 #0x10000c000 地址内存储的地址。再找这个地址…<br><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/acca5b46a20c2d549fbbe8e53bfc21d0.png"></p>
-<p>这个地址是数据段的！__la_symbol_ptr,通过名字也可以看出来—懒加载符号指针表。也就是对应上面提到的GOT表。GOT表内的NSLog又指向了0x660C。</p>
-<p><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/fd4c678b7b1035438732b918cd91d426.png"></p>
-<p>__stub_helper…按照上面的逻辑，这个地址应该就是对应的PLT（程序链接表）。</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">ldr w16,0x100006614</span><br><span class="line">b 0x1000065f4</span><br><span class="line">.long 0x000000000</span><br></pre></td></tr></table></figure>
-<p>把 0x100006614 的值存储到w16内，也就是0，然后跳转到 0x1000065f4<br>0x1000065f4 就是这个__stub_helper的开头，可以观察到最终会跳转到 dyld_stub_binder，这个代码是在动态链接器内。<br>而 0x100006614 的值是为了告诉dyld需要链接的是哪个符号。</p>
-<p>至此第一次绑定的绑定过程已经全部完成了，如果第二次再调用的时候 __la_symbol_ptr 内函数符号对应的地址就已经是Bind之后的值了。</p>
-<p><strong>iOS动态库的首次绑定过程</strong></p>
-<ol>
-<li>指令跳转到符号的”桩代码“</li>
-<li>”桩代码“直接跳转GOT，GOT指向”__stub_helper“代码。</li>
-<li>这个helper代码的目的是跳转到dyld链接器的Bind入口处，执行Bind。</li>
-</ol>
-<p>可以看到，iOS和Linux的动态库绑定还是有点区别的：iOS把”桩代码“后面的跳转dyld部分直接抽离出来，放入了”__stub_helper” 中。（其实本质上是没有区别的）</p>
-<h3 id="运行时分析"><a href="#运行时分析" class="headerlink" title="运行时分析"></a>运行时分析</h3><p>我们在第一个NSLog处打一个断点，然后看汇编代码…<br><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/0ed614a79304fe82ebd32bbd65cff51a.png"></p>
-<p>直接 bl 0x100f46558 (第二个NSLog也是)</p>
-<p>我不会 Xcode 设置地址断点（不知道支不支持），用dis看一下这个地址的汇编代码吧。<br><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/12b7e4719dd20339a6cbd1ba7020ed7c.png"></p>
-<p>这里改成了相对寻址<code>ldr  x16, #0x5aa4</code> x1 最终的值是 当前指令地址+0x5aa4 &#x3D; 0x100F4C000 使用Xcode工具查看内存值。<br><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/b03ec9a2e1f26e74a557fed9bd87db79.png"></p>
-<p>根据静态分析的逻辑，这个地址 0x100f4660c（注意大小端） 应该是 __la_symbol_ptr 中存储的 __stubs_helper 内这个符号的地址，</p>
-<p>再看看这个地址的代码确认一下:<br><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/036b6c1e611cf344da64f74cf774626a.png"></p>
-<p>在下一个NSLog处再打一个断点…验证一下第二次执行。</p>
-<p>依旧是通过查看内存地址，看 0x100F4C000 这个地址的值。<br><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/099695463b49a2eb7f6f2972f6ceb739.png"></p>
-<p>值变成了 0x109c76e754<br><img src="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/826557c3c1e53c4da1529fbfe29dc6ed.png"></p>
-<p>而这个地址就已经变成真正的NSLog的函数地址了~</p>
-<blockquote>
-<p>本文只是通过Linux 的动态库的实现来理解iOS的动态库，通过一些实验和汇编分析验证我们的猜想。关于iOS的dyld的具体源码和细节，我会单开文章。</p>
+          <blockquote>
+<p>【Hard】给定一个只包含 ‘(‘ 和 ‘)’ 的字符串，找出最长的包含有效括号的子串的长度。</p>
 </blockquote>
-<p>参考<br><a target="_blank" rel="noopener" href="https://www.jianshu.com/p/857855cda602">iOS 系统的延迟绑定机制 - 简书</a><br><a target="_blank" rel="noopener" href="https://blog.csdn.net/parallelyk/article/details/42747239">动态共享对象的装载时重定位</a><br><a target="_blank" rel="noopener" href="https://blog.csdn.net/wuhui_gdnt/article/details/51035557">共享库载入时重定位</a><br><a target="_blank" rel="noopener" href="https://blog.csdn.net/wuhui_gdnt/article/details/51094732">共享库中的位置无关代码（PIC）</a></p>
-
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2019/12/21/6.leetcode32/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
       
     </div>
 
@@ -418,7 +336,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">Edited on</span>
-      <time title="Modified: 2020-08-29 22:42:58" itemprop="dateModified" datetime="2020-08-29T22:42:58+08:00">2020-08-29</time>
+      <time title="Modified: 2022-06-16 19:24:59" itemprop="dateModified" datetime="2022-06-16T19:24:59+08:00">2022-06-16</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -514,7 +432,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">Edited on</span>
-      <time title="Modified: 2022-05-21 17:55:38" itemprop="dateModified" datetime="2022-05-21T17:55:38+08:00">2022-05-21</time>
+      <time title="Modified: 2022-06-16 19:24:59" itemprop="dateModified" datetime="2022-06-16T19:24:59+08:00">2022-06-16</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">

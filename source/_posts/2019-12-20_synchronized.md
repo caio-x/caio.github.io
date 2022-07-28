@@ -2,12 +2,13 @@
 title: oc中@synchronized的性能瓶颈
 date: 2019-12-20
 tags: [object-c,锁]
+top: 400
 categories: 语法糖
 ---
 
 ## @synchronized是什么？
 
-一般来说OC上的语法糖，都可以使用 `clang --rewrite-objc code.m` 让clang 编译为 c 或 c++ ，由此可以窥探这些语法糖的具体实现。例如，[oc的block](https://caio.ink/oc-block-imp/)，@autoreleasepool，@synchronized等等
+一般来说OC上的语法糖，都可以使用 `clang --rewrite-objc code.m` 让clang 编译为 c 或 c++ ，由此可以窥探这些语法糖的具体实现(但是实际上XCode在编译的时候，并不会有rewrite的这个过程)。例如，[oc的block](https://caio.ink/oc-block-imp/)，@autoreleasepool，@synchronized等等
 
 <!-- more -->
 

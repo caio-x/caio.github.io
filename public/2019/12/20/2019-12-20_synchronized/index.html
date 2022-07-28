@@ -22,18 +22,18 @@
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"blog.spade-ace.tech","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.11.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":false,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"}}</script><script src="/js/config.js"></script>
 
-    <meta name="description" content="@synchronized是什么？一般来说OC上的语法糖，都可以使用 clang --rewrite-objc code.m 让clang 编译为 c 或 c++ ，由此可以窥探这些语法糖的具体实现。例如，oc的block，@autoreleasepool，@synchronized等等">
+    <meta name="description" content="@synchronized是什么？一般来说OC上的语法糖，都可以使用 clang --rewrite-objc code.m 让clang 编译为 c 或 c++ ，由此可以窥探这些语法糖的具体实现(但是实际上XCode在编译的时候，并不会有rewrite的这个过程)。例如，oc的block，@autoreleasepool，@synchronized等等">
 <meta property="og:type" content="article">
 <meta property="og:title" content="oc中@synchronized的性能瓶颈">
-<meta property="og:url" content="https://blog.spade-ace.tech/2019/12/20/4.synchronized/index.html">
+<meta property="og:url" content="https://blog.spade-ace.tech/2019/12/20/2019-12-20_synchronized/index.html">
 <meta property="og:site_name" content="Spade-Ace">
-<meta property="og:description" content="@synchronized是什么？一般来说OC上的语法糖，都可以使用 clang --rewrite-objc code.m 让clang 编译为 c 或 c++ ，由此可以窥探这些语法糖的具体实现。例如，oc的block，@autoreleasepool，@synchronized等等">
+<meta property="og:description" content="@synchronized是什么？一般来说OC上的语法糖，都可以使用 clang --rewrite-objc code.m 让clang 编译为 c 或 c++ ，由此可以窥探这些语法糖的具体实现(但是实际上XCode在编译的时候，并不会有rewrite的这个过程)。例如，oc的block，@autoreleasepool，@synchronized等等">
 <meta property="og:locale" content="zh_CH">
 <meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/1ff8b0b7aa6cc03e763e5e3c693c19bf.png">
 <meta property="og:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/6c4e55e070f1d49f795e3a440fc2cffd.png">
 <meta property="og:image" content="https://caio.ink/wp-content/uploads/2019/12/e9b18665440cf264a15213547cfc6860.png">
 <meta property="article:published_time" content="2019-12-19T16:00:00.000Z">
-<meta property="article:modified_time" content="2020-08-29T14:42:58.501Z">
+<meta property="article:modified_time" content="2022-07-26T10:50:22.889Z">
 <meta property="article:author" content="Caio">
 <meta property="article:tag" content="object-c">
 <meta property="article:tag" content="锁">
@@ -41,11 +41,11 @@
 <meta name="twitter:image" content="https://blog-caio.oss-cn-hongkong.aliyuncs.com/blog/2019/12/1ff8b0b7aa6cc03e763e5e3c693c19bf.png">
 
 
-<link rel="canonical" href="https://blog.spade-ace.tech/2019/12/20/4.synchronized/">
+<link rel="canonical" href="https://blog.spade-ace.tech/2019/12/20/2019-12-20_synchronized/">
 
 
 
-<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CH","comments":true,"permalink":"https://blog.spade-ace.tech/2019/12/20/4.synchronized/","path":"2019/12/20/4.synchronized/","title":"oc中@synchronized的性能瓶颈"}</script>
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CH","comments":true,"permalink":"https://blog.spade-ace.tech/2019/12/20/2019-12-20_synchronized/","path":"2019/12/20/2019-12-20_synchronized/","title":"oc中@synchronized的性能瓶颈"}</script>
 
 <script class="next-config" data-name="calendar" type="application/json">""</script>
 <title>oc中@synchronized的性能瓶颈 | Spade-Ace</title>
@@ -216,7 +216,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CH">
-    <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2019/12/20/4.synchronized/">
+    <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2019/12/20/2019-12-20_synchronized/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/timg.gif">
@@ -252,7 +252,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">Edited on</span>
-      <time title="Modified: 2020-08-29 22:42:58" itemprop="dateModified" datetime="2020-08-29T22:42:58+08:00">2020-08-29</time>
+      <time title="Modified: 2022-07-26 18:50:22" itemprop="dateModified" datetime="2022-07-26T18:50:22+08:00">2022-07-26</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -274,7 +274,7 @@
     
     
     <div class="post-body" itemprop="articleBody">
-        <h2 id="synchronized是什么？"><a href="#synchronized是什么？" class="headerlink" title="@synchronized是什么？"></a>@synchronized是什么？</h2><p>一般来说OC上的语法糖，都可以使用 <code>clang --rewrite-objc code.m</code> 让clang 编译为 c 或 c++ ，由此可以窥探这些语法糖的具体实现。例如，<a target="_blank" rel="noopener" href="https://caio.ink/oc-block-imp/">oc的block</a>，@autoreleasepool，@synchronized等等</p>
+        <h2 id="synchronized是什么？"><a href="#synchronized是什么？" class="headerlink" title="@synchronized是什么？"></a>@synchronized是什么？</h2><p>一般来说OC上的语法糖，都可以使用 <code>clang --rewrite-objc code.m</code> 让clang 编译为 c 或 c++ ，由此可以窥探这些语法糖的具体实现(但是实际上XCode在编译的时候，并不会有rewrite的这个过程)。例如，<a target="_blank" rel="noopener" href="https://caio.ink/oc-block-imp/">oc的block</a>，@autoreleasepool，@synchronized等等</p>
 <span id="more"></span>
 
 <p>写一个简单的例子:</p>
