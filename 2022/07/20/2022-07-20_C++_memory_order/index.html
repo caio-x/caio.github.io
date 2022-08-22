@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="zh-CH">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 6.2.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/spade-logo-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/spade-logo-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/spade-logo-next.png">
+  <link rel="mask-icon" href="/images/spade-logo-next.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.1.1/css/all.min.css" integrity="sha256-DfWjNxDkM94fVBWx1H5BMMp0Zq7luBlV8QRcSES7s+0=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pace-js@1.2.4/themes/blue/pace-theme-big-counter.css">
+  <script src="https://cdn.jsdelivr.net/npm/pace-js@1.2.4/pace.min.js" integrity="sha256-gqd7YTjg/BtfqWSwsJOvndl0Bxc8gFImLEkXQT8+qj0=" crossorigin="anonymous"></script>
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.spade-ace.tech","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.11.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":false,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="本文主要总结了C++在原子操作上的内存模型以及内存排序标准。 相对来说，C++已经是比较接近系统底层的语言了，C++设计也是希望如此，毕竟它本身已经如此复杂了。在C++ 11的标准里，推出了非常多的新特性，它们让C++变得非常灵活，而它们都依赖于标准里的多线程内存模型。但可能大部分的开发者都不知道这些，因为一般情况下，他们只需要通过mutex这一类高级的同步锁，来在多线程下解决数据竞争问题。至于这">
+<meta property="og:type" content="article">
+<meta property="og:title" content="理解C++内存排序和可见性">
+<meta property="og:url" content="https://blog.spade-ace.tech/2022/07/20/2022-07-20_C++_memory_order/index.html">
+<meta property="og:site_name" content="Spade-Ace">
+<meta property="og:description" content="本文主要总结了C++在原子操作上的内存模型以及内存排序标准。 相对来说，C++已经是比较接近系统底层的语言了，C++设计也是希望如此，毕竟它本身已经如此复杂了。在C++ 11的标准里，推出了非常多的新特性，它们让C++变得非常灵活，而它们都依赖于标准里的多线程内存模型。但可能大部分的开发者都不知道这些，因为一般情况下，他们只需要通过mutex这一类高级的同步锁，来在多线程下解决数据竞争问题。至于这">
+<meta property="og:locale" content="zh_CH">
+<meta property="og:image" content="https://blog.spade-ace.tech/2022/07/20/2022-07-20_C++_memory_order/memory_reorder_case1.jpg">
+<meta property="og:image" content="https://blog.spade-ace.tech/2022/07/20/2022-07-20_C++_memory_order/CPU_memory_struct.jpg">
+<meta property="og:image" content="https://blog.spade-ace.tech/2022/07/20/2022-07-20_C++_memory_order/mutex_memory_case.jpg">
+<meta property="og:image" content="https://blog.spade-ace.tech/2022/07/20/2022-07-20_C++_memory_order/shared_ptr_delete.jpg">
+<meta property="og:image" content="https://blog.spade-ace.tech/2022/07/20/2022-07-20_C++_memory_order/shared_ptr_delete2.jpg">
+<meta property="article:published_time" content="2022-07-19T16:00:00.000Z">
+<meta property="article:modified_time" content="2022-08-22T07:38:29.750Z">
+<meta property="article:author" content="Caio">
+<meta property="article:tag" content="C++">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.spade-ace.tech/2022/07/20/2022-07-20_C++_memory_order/memory_reorder_case1.jpg">
+
+
+<link rel="canonical" href="https://blog.spade-ace.tech/2022/07/20/2022-07-20_C++_memory_order/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CH","comments":true,"permalink":"https://blog.spade-ace.tech/2022/07/20/2022-07-20_C++_memory_order/","path":"2022/07/20/2022-07-20_C++_memory_order/","title":"理解C++内存排序和可见性"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>理解C++内存排序和可见性 | Spade-Ace</title>
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Spade-Ace</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">Not Just an iOS Developer</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="home fa-fw"></i>Home</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BC%9A%E6%9C%89%E8%BF%99%E7%AF%87%E6%96%87%E7%AB%A0"><span class="nav-number">1.</span> <span class="nav-text">为什么会有这篇文章</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E5%BA%8F"><span class="nav-number">2.</span> <span class="nav-text">前序</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%B0%88%E8%B0%88%E6%8C%87%E4%BB%A4%E4%B9%B1%E5%BA%8F"><span class="nav-number">2.1.</span> <span class="nav-text">谈谈指令乱序</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%86%85%E5%AD%98%E5%8F%AF%E8%A7%81%E6%80%A7"><span class="nav-number">2.2.</span> <span class="nav-text">内存可见性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8E%9F%E5%AD%90%E6%93%8D%E4%BD%9C"><span class="nav-number">2.3.</span> <span class="nav-text">原子操作</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%86%85%E5%AD%98%E6%8E%92%E5%BA%8F"><span class="nav-number">3.</span> <span class="nav-text">内存排序</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%A6%82%E5%BF%B5"><span class="nav-number">3.1.</span> <span class="nav-text">概念</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E2%80%9CSequence-Before%E2%80%9D-%E6%8E%92%E5%BA%8F%E4%B8%8A%E5%9C%A8%E2%80%A6%E4%B9%8B%E5%89%8D"><span class="nav-number">3.1.1.</span> <span class="nav-text">“Sequence Before”(排序上在…之前)</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E2%80%9CHappens-Before%E2%80%9D-%E5%9C%A8%E2%80%A6%E4%B9%8B%E5%89%8D%E5%8F%91%E7%94%9F"><span class="nav-number">3.1.2.</span> <span class="nav-text">“Happens Before”(在…之前发生)</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%BE%9D%E8%B5%96%E5%85%B3%E7%B3%BB"><span class="nav-number">3.1.3.</span> <span class="nav-text">依赖关系</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%89%E7%A7%8D%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B"><span class="nav-number">3.2.</span> <span class="nav-text">三种内存模型</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%A1%BA%E5%BA%8F%E4%B8%80%E8%87%B4%E6%80%A7%E7%9A%84%E6%A8%A1%E5%9E%8B"><span class="nav-number">3.2.1.</span> <span class="nav-text">顺序一致性的模型</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%9D%9E%E9%A1%BA%E5%BA%8F%E4%B8%80%E8%87%B4%E6%80%A7%E7%9A%84%E6%A8%A1%E5%9E%8B"><span class="nav-number">3.2.2.</span> <span class="nav-text">非顺序一致性的模型</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E6%9D%BE%E6%95%A3%E5%BA%8F%E5%88%97"><span class="nav-number">3.2.2.1.</span> <span class="nav-text">松散序列</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E8%8E%B7%E5%8F%96-%E9%87%8A%E6%94%BE%E5%BA%8F%E5%88%97"><span class="nav-number">3.2.2.2.</span> <span class="nav-text">获取-释放序列</span></a></li></ol></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%A7%A3%E9%87%8A%E5%BC%80%E5%A7%8B%E7%9A%84%E9%97%AE%E9%A2%98"><span class="nav-number">4.</span> <span class="nav-text">解释开始的问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%8C%AE"><span class="nav-number">5.</span> <span class="nav-text">参考文献</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Caio"
+      src="/images/timg.gif">
+  <p class="site-author-name" itemprop="name">Caio</p>
+  <div class="site-description" itemprop="description">Spade-Ace&apos; Tech Blog</div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">25</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">17</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2022/07/20/2022-07-20_C++_memory_order/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/timg.gif">
+      <meta itemprop="name" content="Caio">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Spade-Ace">
+      <meta itemprop="description" content="Spade-Ace&apos; Tech Blog">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="理解C++内存排序和可见性 | Spade-Ace">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          理解C++内存排序和可见性
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2022-07-20 00:00:00" itemprop="dateCreated datePublished" datetime="2022-07-20T00:00:00+08:00">2022-07-20</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2022-08-22 15:38:29" itemprop="dateModified" datetime="2022-08-22T15:38:29+08:00">2022-08-22</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/C/" itemprop="url" rel="index"><span itemprop="name">C++</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>本文主要总结了C++在原子操作上的内存模型以及内存排序标准。</p>
+<p><strong>相对</strong>来说，C++已经是比较接近系统底层的语言了，C++设计也是希望如此，毕竟它本身已经如此复杂了。在C++ 11的标准里，推出了非常多的新特性，它们让C++变得非常灵活，而它们都依赖于标准里的多线程内存模型。但可能大部分的开发者都不知道这些，因为一般情况下，他们只需要通过mutex这一类高级的同步锁，来在多线程下解决数据竞争问题。至于这些锁是如何实现的，对他们来说并不重要。但是如果要接触到更底层的原理，或需要编写<code>lock-free</code>数据结构，亦或者是需要做更高性能的优化时，那么我们就需要理解这些更接近「机器语言」的数据结构和设计。有时候，一些原子类型或者原子操作，甚至可以让代码缩减到只有1-2个CPU指令。</p>
+<span id="more"></span>
+
+<h2 id="为什么会有这篇文章"><a href="#为什么会有这篇文章" class="headerlink" title="为什么会有这篇文章"></a>为什么会有这篇文章</h2><p><code>objc-block</code>的源码中，有一段C++实现的 objc-block-trampolines.mm 部分，其中有一个<code>lock-free</code>的设计。</p>
+<blockquote>
+<p>首先什么是<code>lock-free</code>？</p>
+</blockquote>
+<p>字面意思，<code>lock-free</code>就是无锁，简单的解释就是：一个系统设计，在<strong>没有阻塞，没有锁</strong>的情况下，实现多线程之间的数据同步。</p>
+<blockquote>
+<p>接下来直接看下这段剔除了无关代码之后的核心部分</p>
+</blockquote>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// fixme C++ compilers don&#x27;t implemement memory_order_consume efficiently.</span></span><br><span class="line"><span class="comment">// Use memory_order_relaxed and cross our fingers.</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> MEMORY_ORDER_CONSUME std::memory_order_relaxed</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">struct</span> <span class="title class_">TrampolinePointers</span> &#123;</span><br><span class="line">    std::atomic&lt;TrampolinePointers *&gt; trampolines&#123;nil&#125;;</span><br><span class="line"></span><br><span class="line">    <span class="function">TrampolinePointers *<span class="title">get</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> trampolines.<span class="built_in">load</span>(MEMORY_ORDER_CONSUME);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">    <span class="function"><span class="type">void</span> <span class="title">Initialize</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (<span class="built_in">get</span>()) <span class="keyword">return</span>;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// This code may be called concurrently.</span></span><br><span class="line">        <span class="comment">// In the worst case we perform extra dyld operations.</span></span><br><span class="line">        <span class="type">void</span> *dylib = <span class="built_in">dlopen</span>(<span class="string">&quot;./libobjc-trampolines.dylib&quot;</span>,</span><br><span class="line">                             RTLD_NOW | RTLD_LOCAL | RTLD_FIRST);</span><br><span class="line">        <span class="keyword">if</span> (!dylib) &#123;</span><br><span class="line">            _objc_fatal(<span class="string">&quot;couldn&#x27;t dlopen libobjc-trampolines.dylib: %s&quot;</span>,</span><br><span class="line">                        <span class="built_in">dlerror</span>());</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">auto</span> t = <span class="keyword">new</span> <span class="built_in">TrampolinePointers</span>(dylib);</span><br><span class="line">        TrampolinePointers *old = nil;</span><br><span class="line">        <span class="keyword">if</span> (! trampolines.<span class="built_in">compare_exchange_strong</span>(old, t, memory_order_release))</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="keyword">delete</span> t;  <span class="comment">// Lost an initialization race.</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>代码实现了一个无锁的单例，单例对象为<code>trampolines</code>。其中<code>get()</code>和<code>Initialize()</code>函数是可以多线程并发执行的。</p>
+<p>首先<code>get()</code>无需解释，直接返回当前的单例对象。如果只有读操作，那在多线程环境下本身也没什么问题。（PS：这种设计下，单例是<strong>有可能</strong>返回空的）</p>
+<p>接着看<code>Initialize()</code>，它的本质其实是一个双判初始化操作，其中<code>if (get()) return;</code>是第一次判断，第二次判断就是<code>trampolines.compare_exchange_strong(old, t, memory_order_release)</code>：</p>
+<p>它将<code>trampolines</code>变量和<code>old</code>变量相比较，如果相等，那么就让<code>t</code>「替换」掉<code>trampolines</code>。</p>
+<p>这句代码等价于</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (trampolines == null) &#123;</span><br><span class="line">    trampolines = t;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>唯一不同的是，前者是一个<strong>原子操作</strong>。也就是说，虽然<code>Initialize()</code>函数可以有多线程并发执行，但是<code>compare_exchange_strong()</code>函数同时只有一个CPU可以执行，并且这个操作是不能被中断的。</p>
+<p>假设当前有两个线程在同时执行，在第一个线程将<code>trampolines</code>通过<code>compare_exchange_strong()</code>赋值后，第二个线程<code>compare_exchange_strong()</code>判断一定会返回false，这也就是为什么返回false，需要<strong>释放</strong>已创建的<code>t</code>。</p>
+<p>一切都可以合理解释，但是其中的第三个参数<code>memory_order_release</code>和<code>MEMORY_ORDER_CONSUME(memory_order_relaxed)</code>是用来做什么的？</p>
+<h2 id="前序"><a href="#前序" class="headerlink" title="前序"></a>前序</h2><h3 id="谈谈指令乱序"><a href="#谈谈指令乱序" class="headerlink" title="谈谈指令乱序"></a>谈谈指令乱序</h3><p>在学校从导论中就已经了解到，现代CPU早已经进入了多核时代，现代的编程技术，也早已支持并发编程。分支预测，乱序执行，指令优化，都会让最终运行在机器上的代码，不再是我们编写代码的时候所预期的那样。</p>
+<p>除了这些以外，各类编译器还会根据自己的实现和规则，对编译的目标代码进行优化，指令重排就是这些优化中重要的一项，但指令重排对这些代码的开发者来说完全黑盒。</p>
+<p>下面用一段简单的代码来举个例子:</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> A = <span class="number">0</span>;</span><br><span class="line"><span class="type">int</span> B = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">func</span><span class="params">(<span class="type">void</span>)</span> </span>&#123;</span><br><span class="line">    A = <span class="number">1</span>;</span><br><span class="line">    <span class="keyword">if</span> (B == <span class="number">0</span>) &#123;</span><br><span class="line">        A = <span class="number">2</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>Clang编译上面这段代码后会产出如下的汇编：<br><img src="/2022/07/20/2022-07-20_C++_memory_order/memory_reorder_case1.jpg" alt="memory_reorder_case1"></p>
+<p>可以很明显看到，先比较了B &#x3D;&#x3D; 0，后加载了 A &#x3D; 1；😱</p>
+<p>我们把我们看到的理解代码的顺序，暂且叫<code>代码顺序</code>，而这种不按照<code>代码顺序</code>来执行的编译器行为称之为<code>指令乱序</code>。从编译器的角度来看，它只需要保证<strong>在单线程的情况下，代码能够正确地执行，并且符合单线程的预期即可</strong>。就上面的代码而言，「看起来」和「执行结果」的确是没有问题的。但是在多线程环境下，这个结论就不再成立了。因为<strong>编译器是不知道多线程环境下代码执行的先后顺序，也不知道哪些变量会在线程之间共享</strong>，这个时候<code>指令乱序</code>会导致严重的后果。了解一下关于「锁」的反面例子：</p>
+<p>「锁」是绝大部分开发者在编程的时候，会选择用来解决多线程下的数据竞争问题。不论是mutex，还是自旋锁，用锁来保护临界区，是一个程序员的基本操作。那么按照上面编译器不可预知的<code>指令乱序</code>行为，如果「锁住」的临界区内的代码，在被编译优化后，理论上不会跑出临界区吗？比如我们把上面的代码稍微改一下。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> A = <span class="number">0</span>;</span><br><span class="line">mutex lck;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">func</span><span class="params">(<span class="type">void</span>)</span> </span>&#123;</span><br><span class="line">    mutex.<span class="built_in">lock</span>();</span><br><span class="line">    A = <span class="number">1</span>;</span><br><span class="line">    mutex.<span class="built_in">unlock</span>();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><code>A = 1</code>会不会跑出来？？</p>
+<p>线上暂无故障，我们肯定可以理直气壮地说，这个代码100%不会有问题的，那为什么呢？？？</p>
+<h3 id="内存可见性"><a href="#内存可见性" class="headerlink" title="内存可见性"></a>内存可见性</h3><p>除了指令乱序，还有一个问题会影响代码的一致性，那就是内存可见性。我们知道，CPU执行指令的速度，和内存的读写速度不是一个量级的，因此CPU引入了多级缓存，就像下面这样（原谅我的画功）：</p>
+<p><img src="/2022/07/20/2022-07-20_C++_memory_order/CPU_memory_struct.jpg" alt="2022-07-20_C++_memory_order"></p>
+<p>每个内核都有自己的L1，L2甚至L3缓存，为了提升运行速度，在内核读某个内存值的时候，如果在缓存内命中，那么很有可能就会直接使用缓存内的值；同样的，写入操作也有可能只会临时写入缓存；当触发缺页，或者某个回写机制的时候，这些缓存中的值才会真正刷新到主存中去。从这张图垂直得来看，其实每一个内核都有自己独立的缓存，而各个缓存之间的同步机制，会影响内存的「可见性」。</p>
+<p>举个例子 </p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;iostream&gt;</span>       <span class="comment">// std::cout</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;thread&gt;</span>         <span class="comment">// std::thread</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;atomic&gt;</span>         <span class="comment">// std::atomic</span></span></span><br><span class="line"><span class="type">int</span> v = <span class="number">0</span>;</span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">plus</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">for</span>(<span class="type">int</span> i=<span class="number">0</span>; i&lt;<span class="number">10000</span>; i++)</span><br><span class="line">    &#123;</span><br><span class="line">        ++v;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="type">int</span> <span class="title">main</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="function">std::thread <span class="title">t1</span><span class="params">(plus)</span></span>;</span><br><span class="line">    <span class="function">std::thread <span class="title">t2</span><span class="params">(plus)</span></span>;</span><br><span class="line">    t1.<span class="built_in">join</span>();</span><br><span class="line">    t2.<span class="built_in">join</span>();</span><br><span class="line">    std::cout &lt;&lt; <span class="string">&quot;v: &quot;</span> &lt;&lt; v &lt;&lt; std::endl;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>上面这个例子, 在多核CPU上执行最终结果大概率是小于2000的。当一个内核(线程)在读取变量之后，另一个内核(线程)对它做了修改，但没有回写主存，也没有同步到其他内核(线程)中去的时候，就会出现不一致的情况。这块内存对于不同的线程的可见性也就不一致了。</p>
+<h3 id="原子操作"><a href="#原子操作" class="headerlink" title="原子操作"></a>原子操作</h3><p>原子操作，就是在单核CPU上，一个CPU指令就能完成的操作，比如MOV，INC等等。如果一个操作需要多个指令来完成，那么在多个指令之间，有可能会触发系统中断，在中断过程中，修改了这个操作的中间变量，这个操作就不再「原子」。</p>
+<p>C++提供了<code>std::atomic</code>来实现原子操作, 还是上面那个例子，稍微改一下:</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;iostream&gt;</span>       <span class="comment">// std::cout</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;thread&gt;</span>         <span class="comment">// std::thread</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;atomic&gt;</span>         <span class="comment">// std::atomic</span></span></span><br><span class="line"><span class="function">std::atomic&lt;<span class="type">int</span>&gt; <span class="title">v</span><span class="params">(<span class="number">0</span>)</span></span>;</span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">plus</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">for</span>(<span class="type">int</span> i=<span class="number">0</span>; i&lt;<span class="number">10000</span>; i++)</span><br><span class="line">    &#123;</span><br><span class="line">        ++v;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="type">int</span> <span class="title">main</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="function">std::thread <span class="title">t1</span><span class="params">(plus)</span></span>;</span><br><span class="line">    <span class="function">std::thread <span class="title">t2</span><span class="params">(plus)</span></span>;</span><br><span class="line">    t1.<span class="built_in">join</span>();</span><br><span class="line">    t2.<span class="built_in">join</span>();</span><br><span class="line">    std::cout &lt;&lt; <span class="string">&quot;v: &quot;</span> &lt;&lt; v &lt;&lt; std::endl;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里的<code>++v</code>等价于 <code>v.fetch_add(1)</code>，它可以保证任意一个线程对v的修改，对其他线程是立刻可见的。保证了任意一个线程每次读到的v一定是当前的最新值。</p>
+<h2 id="内存排序"><a href="#内存排序" class="headerlink" title="内存排序"></a>内存排序</h2><p>原子变量和原子操作其实已经解决了内存可见性问题，内存排序就是用来解决乱序问题。</p>
+<h3 id="概念"><a href="#概念" class="headerlink" title="概念"></a>概念</h3><p>网文有很多在解释内存排序，都会提到这些概念，他们都来自<a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/thread">C++并发编程的标准文档</a>中。在解释模型之前，确实需要理清这些概念，避免后续解释混淆。</p>
+<blockquote>
+<p>先整体解释一下 <code>std:memory_order</code></p>
+</blockquote>
+<p><code>std:memory_order</code> 指定了一个原子操作的周围是如何来排序一些非原子操作的内存访问顺序的。在多核CPU上，某个线程观察到的变量的变化顺序，可能和真正修改这个变量的线程的写入顺序完全不一样，就是因为上面提到的<code>指令乱序</code>，甚至可能在单核CPU系统上依旧会存在相似的问题。标准库给到的默认行为是顺序一致性行为，这种会影响性能。但是除了原子能力，标准库提供了<code>std:memory_order</code>这个参数来指定特定约束。</p>
+<h4 id="“Sequence-Before”-排序上在…之前"><a href="#“Sequence-Before”-排序上在…之前" class="headerlink" title="“Sequence Before”(排序上在…之前)"></a>“Sequence Before”(<strong>排序上在…之前</strong>)</h4><p>“Sequence Before”是一种在单个线程内的两个调用(表达式)之间，非对称的，可传递的关系。</p>
+<ul>
+<li>A <strong>排序上在</strong> B <strong>之前</strong> 等价于 B <strong>排序上在</strong> A <strong>之后</strong>, 前者 A 计算会在 B 计算开始之前结束。</li>
+<li>如果 A 不是<strong>排序上在</strong> B <strong>之前</strong>，并且 B 也不是<strong>排序上在</strong> A <strong>之前</strong>，那么就会有两种可能：<ul>
+<li>A B 两次计算是无序的: A B计算可能在任一顺序，并且有多个重叠部分的情况下发生。</li>
+<li>A B 两次计算的顺序是随机的: A B计算可能是在任一顺序，但是没有重叠。如 A 在 B 开始之前结束，或者 B 在 A 开始之前结束。</li>
+</ul>
+</li>
+</ul>
+<p>举个例子</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">r1 = y.<span class="built_in">load</span>(std::memory_order_relaxed); <span class="comment">// A</span></span><br><span class="line">x.<span class="built_in">store</span>(r1, std::memory_order_relaxed); <span class="comment">// B</span></span><br></pre></td></tr></table></figure>
+<p>称 A 排序上在 B 之前</p>
+<h4 id="“Happens-Before”-在…之前发生"><a href="#“Happens-Before”-在…之前发生" class="headerlink" title="“Happens Before”(在…之前发生)"></a>“Happens Before”(在…之前发生)</h4><p>除了”Sequence Before”关系之外，”Happens Before”还包含了”Inter-thread happens-before(<strong>线程间，在…之前发生</strong>)”的关系</p>
+<h4 id="依赖关系"><a href="#依赖关系" class="headerlink" title="依赖关系"></a>依赖关系</h4><p>在同一个线程内，A 计算<strong>排序上在</strong> B <strong>之前</strong>，还会给B附带上一个依赖关系（那就是 B 依赖 A），下面的表述都是 B 依赖 A。</p>
+<ul>
+<li>A 计算的值被用来作为 B 计算的操作数，除了<ul>
+<li>B 是 std::kill_dependency</li>
+<li>A 是内置的操作符 <code>&amp;&amp;</code> <code>||</code> <code>?:</code> 或者 <code>,</code>的左值</li>
+<li>A 向标量对象 M 写入，B 从 M 读取</li>
+<li>A 给另一个计算 X 引入依赖关系，而 X 给 B 又引入依赖关系。（即依赖的传递）</li>
+</ul>
+</li>
+</ul>
+<h3 id="三种内存模型"><a href="#三种内存模型" class="headerlink" title="三种内存模型"></a>三种内存模型</h3><p><strong>对原子操作</strong>，C++有6种内存序列，分别是：</p>
+<ol>
+<li><code>memory_order_relaxed</code></li>
+<li><code>memory_order_consume</code></li>
+<li><code>memory_order_acquire</code></li>
+<li><code>memory_order_release</code></li>
+<li><code>memory_order_acq_rel</code></li>
+<li><code>memory_order_seq_cst</code></li>
+</ol>
+<p>在不指定的情况下，默认是<code>memory_order_seq_cst</code>。</p>
+<p>虽然有6种内存序列，但他们只对应了3种模型(其实是4种)，分别是：</p>
+<ol>
+<li><code>sequentially consistent</code>（顺序一致性排序） 「<code>memory_order_seq_cst</code>」</li>
+<li><code>acquire-release</code>（获取-释放序列）「<code>memory_order_acquire</code>, <code>memory_order_release</code>, <code>memory_order_acq_rel</code>」</li>
+<li><code>relaxed</code>（松散序列）「<code>memory_order_relaxed</code>」</li>
+</ol>
+<p>第四种<code>consume-release</code>模型因为<code>memory_order_consume</code>序列目前在实现上有性能问题，不建议使用，也就不讨论这个。</p>
+<h4 id="顺序一致性的模型"><a href="#顺序一致性的模型" class="headerlink" title="顺序一致性的模型"></a>顺序一致性的模型</h4><p>上面提到了，内存排序默认就是<code>memory_order_seq_cst</code>，对应的模型就是「顺序一致性排序模型」。</p>
+<p>顺序一致性，意思是在程序执行过程中，所有对于原子类型数据的操作，就像是我们从源码看上去，以我们所看到的那样。</p>
+<p>换句话说，顺序一致性，在多线程的环境下，原子类型的数据，将会像在单线程下处理一样 —— 一个操作接一个操作排好顺序来执行。到目前为止，这个顺序是最好理解的，在多线程环境下，每一个线程，对原子数据进行操作的优先级都是一样的。</p>
+<p>但是这也就意味着，多线程下对于这个原子的操作是无法被排序的，也就是说CPU是无法针对这些原子操作的前后进行编译优化的。</p>
+<h4 id="非顺序一致性的模型"><a href="#非顺序一致性的模型" class="headerlink" title="非顺序一致性的模型"></a>非顺序一致性的模型</h4><p>非顺序一致性的模型，包含两种，一种是「松散序列」，另一种是「获取-释放序列」。</p>
+<p>在这种模型下，就不再和上面一样有一个「全局有序的事件队列」了，细想一下这个模型在多线程下就会变得非常复杂了。在理解这种模型的时候，我们必须要抛开我们固有的多线程操作的心理预期模型，原子操作在不同线程中看到的将会是不同的样子。</p>
+<h5 id="松散序列"><a href="#松散序列" class="headerlink" title="松散序列"></a>松散序列</h5><p>松散序列是非顺序一致性模型中的一种，简单的来说，因为<code>指令乱序</code>的存在，使用「<code>memory_order_relaxed</code>」这一种模型，会让这个原子操作，「可能」出现在这个原子操作序列的任一阶段。换句话说，它只会保证操作的原子性与修改顺序的一致性（它只起到了原子操作的作用）。</p>
+<p>举一个例子来理解</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">std::automic&lt;<span class="type">int</span>&gt; x = <span class="number">0</span>;</span><br><span class="line">std::automic&lt;<span class="type">int</span>&gt; y = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 线程1</span></span><br><span class="line">r1 = y.<span class="built_in">load</span>(std::memory_order_relaxed); <span class="comment">// A</span></span><br><span class="line">x.<span class="built_in">store</span>(r1, std::memory_order_relaxed); <span class="comment">// B</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 线程2</span></span><br><span class="line">r2 = x.<span class="built_in">load</span>(std::memory_order_relaxed); <span class="comment">// C </span></span><br><span class="line">y.<span class="built_in">store</span>(<span class="number">42</span>, std::memory_order_relaxed); <span class="comment">// D</span></span><br></pre></td></tr></table></figure>
+
+<p>线程1 的操作为 A -&gt; B, 线程B的操作为 C -&gt; D, 所以如果按照顺序一致性的模型来理解的话，那么就会有下面的几种可能性</p>
+<ol>
+<li>A -&gt; B -&gt; C -&gt; D</li>
+<li>A -&gt; C -&gt; B -&gt; D</li>
+<li>A -&gt; C -&gt; D -&gt; B</li>
+<li>C -&gt; D -&gt; A -&gt; B</li>
+<li>C -&gt; A -&gt; D -&gt; B</li>
+<li>C -&gt; A -&gt; B -&gt; D</li>
+</ol>
+<p>这6种可能性执行完之后，r1&#x3D;r2&#x3D;0, 或 r1 &#x3D; 42,r2 &#x3D; 0;</p>
+<p>但是在松散序列下就不一样了，线程2中，y原子操作并不依赖任何操作，所以编译器可以选择将 D 操作顺序移动到 C 操作之前。<br>所以，在上面的6种可能性中，C，D可以交换，产生12种可能性。结果中可能会产生 r1&#x3D;42,r2&#x3D;42 这种情况。</p>
+<p>再举个例子，这个例子来自「C++ Concurrency In Action」</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;atomic&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;thread&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;assert.h&gt;</span></span></span><br><span class="line">std::atomic&lt;<span class="type">bool</span>&gt; x,y;</span><br><span class="line">std::atomic&lt;<span class="type">int</span>&gt; z;</span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">write_x_then_y</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    x.<span class="built_in">store</span>(<span class="literal">true</span>,std::memory_order_relaxed); <span class="comment">// A</span></span><br><span class="line">    y.<span class="built_in">store</span>(<span class="literal">true</span>,std::memory_order_relaxed); <span class="comment">// B</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">read_y_then_x</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">while</span>(!y.<span class="built_in">load</span>(std::memory_order_relaxed)); <span class="comment">// C</span></span><br><span class="line">    <span class="keyword">if</span>(x.<span class="built_in">load</span>(std::memory_order_relaxed)) &#123; <span class="comment">// D</span></span><br><span class="line">        ++z;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    x=<span class="literal">false</span>;</span><br><span class="line">    y=<span class="literal">false</span>;</span><br><span class="line">    z=<span class="number">0</span>;</span><br><span class="line">    <span class="function">std::thread <span class="title">a</span><span class="params">(write_x_then_y)</span></span>;</span><br><span class="line">    <span class="function">std::thread <span class="title">b</span><span class="params">(read_y_then_x)</span></span>;</span><br><span class="line">    a.<span class="built_in">join</span>();</span><br><span class="line">    b.<span class="built_in">join</span>();</span><br><span class="line">    <span class="built_in">assert</span>(z.<span class="built_in">load</span>()!=<span class="number">0</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>x, y在同一个线程内「依次」原子写入 true。另一个线程内，在y写入true之后，判断x是否已经是true了，如果是则z++。</p>
+<p>从顺序一致性的模型来理解的话，断言是肯定不会触发的，因为在y变为true的时候，x一定已经是true了。</p>
+<p>但是同样的，在松散序列下，x,y 没有任何相互依赖关系。A，B操作是有可能会指令乱序的。所以在这个情况下，断言是有可能触发的。</p>
+<p>「<code>memory_order_relaxed</code>」这个模式最典型的运用就是<code>shared_ptr</code>引用计数中的计数+1部分</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;vector&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;iostream&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;thread&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;atomic&gt;</span></span></span><br><span class="line"> </span><br><span class="line">std::atomic&lt;<span class="type">int</span>&gt; cnt = &#123;<span class="number">0</span>&#125;;</span><br><span class="line"> </span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">f</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> n = <span class="number">0</span>; n &lt; <span class="number">1000</span>; ++n) &#123;</span><br><span class="line">        cnt.<span class="built_in">fetch_add</span>(<span class="number">1</span>, std::memory_order_relaxed);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"> </span><br><span class="line"><span class="function"><span class="type">int</span> <span class="title">main</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    std::vector&lt;std::thread&gt; v;</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> n = <span class="number">0</span>; n &lt; <span class="number">10</span>; ++n) &#123;</span><br><span class="line">        v.<span class="built_in">emplace_back</span>(f);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">auto</span>&amp; t : v) &#123;</span><br><span class="line">        t.<span class="built_in">join</span>();</span><br><span class="line">    &#125;</span><br><span class="line">    std::cout &lt;&lt; <span class="string">&quot;Final counter value is &quot;</span> &lt;&lt; cnt &lt;&lt; <span class="string">&#x27;\n&#x27;</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>因为<code>fetch_add</code>可以保证操作的原子性和修改内存的一致性，所以计数不会出错，而目的也只需要保证最终计数的准确性，这里使用<code>memory_order_relaxed</code>就可以达成目的。</p>
+<h5 id="获取-释放序列"><a href="#获取-释放序列" class="headerlink" title="获取-释放序列"></a>获取-释放序列</h5><p>上面两个序列是两个极端，一种是非常严格的策略，另一种则是非常宽松，而<code>获取-释放序列</code>则是位于两者之间。</p>
+<table>
+<thead>
+<tr>
+<th>memory_order</th>
+<th>description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>memory_order_release</td>
+<td>仅用于 store 操作，当前线程内在 store 操作之后的任何内存读写操作都无法被重排到store操作之前</td>
+</tr>
+<tr>
+<td>memory_order_acquire</td>
+<td>仅用于 load 操作，当前线程内在 load 操作之后的任何内存读写操作都无法被重排到load操作之后</td>
+</tr>
+</tbody></table>
+<p>当线程A中的原子变量的<code>store</code>操作被标记为<code>memory_order_release</code>，而线程B中同一个原子变量的<code>load</code>操作被标记为<code>memory_order_acquire</code>属性的时候，<strong>在</strong>A线程中<code>store</code>操作<strong>之前发生</strong>的所有(非原子的和relax的)操作，都会在B线程<code>load</code>操作之后全部可见。也就是说，<strong>需也仅需</strong><code>load</code>操作完成，那么B线程内可以看到A线程之前的所有写入操作。</p>
+<p>这种同步关系，只会建立在不同线程对于同一个原子变量的<code>release</code>和<code>acquire</code>操作之间，其他线程看到的顺序就不可预知了。</p>
+<p>一些互斥锁，例如std::mutex或者自旋锁，就是<code>release-acquire</code>内存同步的一个典型案例: 在线程A<code>release</code>之前，临界区内发生的所有事情，都必须在B<code>acquire</code>进入临界区后可见。</p>
+<p><img src="/2022/07/20/2022-07-20_C++_memory_order/mutex_memory_case.jpg" alt="mutex_memory_case"></p>
+<p>上图完整的解释了锁内临界区内的代码，是不可以被重排到临界区外的。</p>
+<p>再来看一个引用计数的减一例子：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">control_block_ptr-&gt;<span class="built_in">Write</span>(); </span><br><span class="line"><span class="keyword">if</span>(control_block_ptr-&gt;refs.<span class="built_in">fetch_sub</span>(<span class="number">1</span>, std::memory_order_acq_rel) == <span class="number">0</span>)</span><br><span class="line">    <span class="keyword">delete</span> control_block_ptr;</span><br></pre></td></tr></table></figure>
+
+<p>引用计数减一的时候这里用的是<code>acq_rel</code>, 而不再是<code>relax</code>了。因为这里涉及到了数据的销毁，看下如果依旧使用<code>relax</code>会发生什么。</p>
+<p><img src="/2022/07/20/2022-07-20_C++_memory_order/shared_ptr_delete.jpg" alt="shared_ptr_delete"></p>
+<p>对象的读写可能会被重排到 <code>fetch_sub</code> 之后，而此刻如果另一个线程同时也正在销毁对象的时候，发现<code>fetch_sub</code>已经是0了，随后就将数据销毁了。从线程B单个视角来看的话，销毁发生在对象写入之后，不会有异常产生。但是线程A和B同时执行的时候，A线程的写入操作，就有可能会发生在线程B的销毁之后了。</p>
+<p>如果这里对<code>fetch_sub</code>指定为<code>release</code>排序模型，禁止对象写入重排到原子操作后面。</p>
+<p><img src="/2022/07/20/2022-07-20_C++_memory_order/shared_ptr_delete2.jpg" alt="shared_ptr_delete2"></p>
+<p>这样一来，因为对象的写入操作永远保证在<code>fetch_sub</code>之前，那么<code>delete</code>操作之后也就不可能会出现对象写入操作（这里是指在引用计数的环境之下）。</p>
+<p>同样的原理需要考虑对象操作在<code>fetch_sub</code>之后，这时候就需要<code>acquire</code>操作。同时需要<code>acquire</code>和<code>release</code>，即<code>memory_order_acq_rel</code>。</p>
+<h2 id="解释开始的问题"><a href="#解释开始的问题" class="headerlink" title="解释开始的问题"></a>解释开始的问题</h2><blockquote>
+<p>为什么锁内临界区的代码不会被重排序到临界区之外？</p>
+</blockquote>
+<p>这个问题已经解释过了，<code>release-acquire</code>模型可以保证临界区的数据竞争问题。</p>
+<blockquote>
+<p>回头再来分析最开始的<code>lock-free</code>的代码</p>
+</blockquote>
+<p>代码中使用了<code>memory_order_consume</code> 这个属性，这个属性在上面分析的时候跳过了。一句话概括，它在<code>cppreference</code>中定义和<code>memory_order_acquire</code>相似，只是将”当前线程内在 load 操作之后的任何内存读写操作都无法被重排到load操作之后”这个定义内的”任何内存读写操作”, 变更为”依赖当前原子变量的读写操作”。</p>
+<p>是不是很眼熟？和<code>mutex</code>的设计如出一辙，只是它不再像<code>mutex</code>一样会阻塞线程。</p>
+<p>从<code>mutex</code>的设计角度思考，<code>Initialize()</code>函数内<code>get()</code>和<code>compare_exchange_strong()</code>之间的代码就是”临界区”，临界区的核心代码就是<strong>将<code>trampolines</code>修改为t</strong>。</p>
+<p>但是因为实现的性能问题，<code>cppreference</code>是不建议使用<code>consume</code>, 苹果的源码里更是用宏将它改为了<code>relax</code>。那这样会发生什么问题？</p>
+<p><code>relax</code>可以让原子变量的访问性能达到最优，但是从<code>临界区</code>的角度来思考，<code>relax</code>就没有任何排序限制了。那么<code>临界区</code>内的代码就有可能会被重排到<code>get()</code>之前，比如说<code>dlopen</code>被重排到最前端，如果一旦后续<code>get() return;</code>，那么造成内存泄漏。</p>
+<p>苹果可以确保clang不会这么干，但毕竟C++也只是一个标准，各家编译器的实现大不相同。苹果工程师能做的，只有祈祷🙏🏻<code>cross our fingers</code>。</p>
+<h2 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h2><p><a target="_blank" rel="noopener" href="https://www.jb51.net/article/246087.htm">浅析C++ atomic 和 memory ordering</a><br><a target="_blank" rel="noopener" href="https://www.huliujia.com/blog/df3c2e8a9ef77bd2ed0d83292778734eb395970c/">聊一聊原子操作</a><br><a target="_blank" rel="noopener" href="https://www.huliujia.com/blog/f85f72a3b3e3018ffe9c9d3c15dda0f5db079859/">内存乱序与C++内存模型详解</a><br><a target="_blank" rel="noopener" href="https://www.ccppcoding.com/archives/221">聊聊内存模型与内存序</a><br><a target="_blank" rel="noopener" href="https://paul.pub/cpp-memory-model/">C++ 内存模型</a><br><a target="_blank" rel="noopener" href="https://colobu.com/2014/12/19/an-introduction-to-lock-free-programming/">lock-free 编程介绍</a><br><a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/14881056/confusion-about-implementation-error-within-shared-ptr-destructor">confusion-about-implementation-error-within-shared-ptr-destructor</a><br><a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/49112732/">memory-order-in-shared-pointer-destructor</a><br><a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/language/eval_order">cppreference</a></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/C/" rel="tag"># C++</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2020/08/29/2020-08-29_db_system_design_imp(WAL)/" rel="prev" title="WAL Mode">
+                  <i class="fa fa-chevron-left"></i> WAL Mode
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2022/07/20/2022-07-20_ARM64_assmble/" rel="next" title="ARM64汇编分析常用指令、寄存器">
+                  ARM64汇编分析常用指令、寄存器 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Caio</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/pace.js"></script>
+
+  
+
+
+
+
+
+</body>
+</html>
