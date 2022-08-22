@@ -404,17 +404,17 @@ if(control_block_ptr->refs.fetch_sub(1, std::memory_order_acq_rel) == 0)
 
 > 回头再来分析最开始的`lock-free`的代码
 
-`memory_order_consume` 这个模型在`cppreference`中定义和`memory_order_acquire`相似，只是其中只是依赖当前原子变量的读写操作，无法被排序到`consume`操作之前。
+代码中使用了`memory_order_consume` 这个属性，这个属性在上面分析的时候跳过了。一句话概括，它在`cppreference`中定义和`memory_order_acquire`相似，只是将"当前线程内在 load 操作之后的任何内存读写操作都无法被重排到load操作之后"这个定义内的"任何内存读写操作", 变更为"依赖当前原子变量的读写操作"。
 
 是不是很眼熟？和`mutex`的设计如出一辙，只是它不再像`mutex`一样会阻塞线程。
 
-换个角度想，`Initialize()`函数内`get()`和`compare_exchange_strong()`之间的代码就是"临界区"，临界区的核心代码就是**将`trampolines`修改为t**
+从`mutex`的设计角度思考，`Initialize()`函数内`get()`和`compare_exchange_strong()`之间的代码就是"临界区"，临界区的核心代码就是**将`trampolines`修改为t**。
 
-但是因为实现的性能问题，`cppreference`不建议使用`consume`, 源码里更是直接将它改为了`relax`。
+但是因为实现的性能问题，`cppreference`是不建议使用`consume`, 苹果的源码里更是用宏将它改为了`relax`。那这样会发生什么问题？
 
-从`临界区`的角度来思考，就是会将`临界区`内的代码重排到`get()`之前，比如说dlopen之后，调用了`get()`，然后`return`，造成内存泄漏。
+`relax`可以让原子变量的访问性能达到最优，但是从`临界区`的角度来思考，`relax`就没有任何排序限制了。那么`临界区`内的代码就有可能会被重排到`get()`之前，比如说`dlopen`被重排到最前端，如果一旦后续`get() return;`，那么造成内存泄漏。
 
-但是这里苹果还是将它改为了`relax`，然后只能在注释里祈祷🙏🏻`cross our fingers`，别出问题。
+苹果可以确保clang不会这么干，但毕竟C++也只是一个标准，各家编译器的实现大不相同。苹果工程师能做的，只有祈祷🙏🏻`cross our fingers`。
 
 ## 参考文献
 [浅析C++ atomic 和 memory ordering](https://www.jb51.net/article/246087.htm)

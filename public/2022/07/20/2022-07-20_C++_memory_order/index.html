@@ -35,7 +35,7 @@
 <meta property="og:image" content="https://blog.spade-ace.tech/2022/07/20/2022-07-20_C++_memory_order/shared_ptr_delete.jpg">
 <meta property="og:image" content="https://blog.spade-ace.tech/2022/07/20/2022-07-20_C++_memory_order/shared_ptr_delete2.jpg">
 <meta property="article:published_time" content="2022-07-19T16:00:00.000Z">
-<meta property="article:modified_time" content="2022-08-21T14:40:17.775Z">
+<meta property="article:modified_time" content="2022-08-22T07:38:29.750Z">
 <meta property="article:author" content="Caio">
 <meta property="article:tag" content="C++">
 <meta name="twitter:card" content="summary">
@@ -253,7 +253,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">Edited on</span>
-      <time title="Modified: 2022-08-21 22:40:17" itemprop="dateModified" datetime="2022-08-21T22:40:17+08:00">2022-08-21</time>
+      <time title="Modified: 2022-08-22 15:38:29" itemprop="dateModified" datetime="2022-08-22T15:38:29+08:00">2022-08-22</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -437,12 +437,12 @@
 <blockquote>
 <p>回头再来分析最开始的<code>lock-free</code>的代码</p>
 </blockquote>
-<p><code>memory_order_consume</code> 这个模型在<code>cppreference</code>中定义和<code>memory_order_acquire</code>相似，只是其中只是依赖当前原子变量的读写操作，无法被排序到<code>consume</code>操作之前。</p>
+<p>代码中使用了<code>memory_order_consume</code> 这个属性，这个属性在上面分析的时候跳过了。一句话概括，它在<code>cppreference</code>中定义和<code>memory_order_acquire</code>相似，只是将”当前线程内在 load 操作之后的任何内存读写操作都无法被重排到load操作之后”这个定义内的”任何内存读写操作”, 变更为”依赖当前原子变量的读写操作”。</p>
 <p>是不是很眼熟？和<code>mutex</code>的设计如出一辙，只是它不再像<code>mutex</code>一样会阻塞线程。</p>
-<p>换个角度想，<code>Initialize()</code>函数内<code>get()</code>和<code>compare_exchange_strong()</code>之间的代码就是”临界区”，临界区的核心代码就是<strong>将<code>trampolines</code>修改为t</strong></p>
-<p>但是因为实现的性能问题，<code>cppreference</code>不建议使用<code>consume</code>, 源码里更是直接将它改为了<code>relax</code>。</p>
-<p>从<code>临界区</code>的角度来思考，就是会将<code>临界区</code>内的代码重排到<code>get()</code>之前，比如说dlopen之后，调用了<code>get()</code>，然后<code>return</code>，造成内存泄漏。</p>
-<p>但是这里苹果还是将它改为了<code>relax</code>，然后只能在注释里祈祷🙏🏻<code>cross our fingers</code>，别出问题。</p>
+<p>从<code>mutex</code>的设计角度思考，<code>Initialize()</code>函数内<code>get()</code>和<code>compare_exchange_strong()</code>之间的代码就是”临界区”，临界区的核心代码就是<strong>将<code>trampolines</code>修改为t</strong>。</p>
+<p>但是因为实现的性能问题，<code>cppreference</code>是不建议使用<code>consume</code>, 苹果的源码里更是用宏将它改为了<code>relax</code>。那这样会发生什么问题？</p>
+<p><code>relax</code>可以让原子变量的访问性能达到最优，但是从<code>临界区</code>的角度来思考，<code>relax</code>就没有任何排序限制了。那么<code>临界区</code>内的代码就有可能会被重排到<code>get()</code>之前，比如说<code>dlopen</code>被重排到最前端，如果一旦后续<code>get() return;</code>，那么造成内存泄漏。</p>
+<p>苹果可以确保clang不会这么干，但毕竟C++也只是一个标准，各家编译器的实现大不相同。苹果工程师能做的，只有祈祷🙏🏻<code>cross our fingers</code>。</p>
 <h2 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h2><p><a target="_blank" rel="noopener" href="https://www.jb51.net/article/246087.htm">浅析C++ atomic 和 memory ordering</a><br><a target="_blank" rel="noopener" href="https://www.huliujia.com/blog/df3c2e8a9ef77bd2ed0d83292778734eb395970c/">聊一聊原子操作</a><br><a target="_blank" rel="noopener" href="https://www.huliujia.com/blog/f85f72a3b3e3018ffe9c9d3c15dda0f5db079859/">内存乱序与C++内存模型详解</a><br><a target="_blank" rel="noopener" href="https://www.ccppcoding.com/archives/221">聊聊内存模型与内存序</a><br><a target="_blank" rel="noopener" href="https://paul.pub/cpp-memory-model/">C++ 内存模型</a><br><a target="_blank" rel="noopener" href="https://colobu.com/2014/12/19/an-introduction-to-lock-free-programming/">lock-free 编程介绍</a><br><a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/14881056/confusion-about-implementation-error-within-shared-ptr-destructor">confusion-about-implementation-error-within-shared-ptr-destructor</a><br><a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/49112732/">memory-order-in-shared-pointer-destructor</a><br><a target="_blank" rel="noopener" href="https://en.cppreference.com/w/cpp/language/eval_order">cppreference</a></p>
 
     </div>
