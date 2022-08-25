@@ -3,12 +3,13 @@ top 值用来做文章首页排序，值越大，排序越靠前
 约定:
 
 C++相关 500 - 600 
-当前最大值：
+C++ memory_order 500
 
 OC-Swift相关 400 - 500
 autorelase-opt: 400
 synchronized: 400
 oc-block: 400
+Swift-conclusion: 401
 
 SQLite相关 300
 
