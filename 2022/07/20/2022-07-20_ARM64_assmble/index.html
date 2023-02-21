@@ -30,7 +30,7 @@
 <meta property="og:description" content="ARM64 汇编快速查阅表 – 持续更新…">
 <meta property="og:locale" content="zh_CH">
 <meta property="article:published_time" content="2022-07-19T16:00:00.000Z">
-<meta property="article:modified_time" content="2022-08-08T01:38:22.646Z">
+<meta property="article:modified_time" content="2022-10-28T02:33:07.331Z">
 <meta property="article:author" content="Caio">
 <meta property="article:tag" content="汇编">
 <meta name="twitter:card" content="summary">
@@ -146,7 +146,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B8%B8%E7%94%A8%E5%AF%84%E5%AD%98%E5%99%A8"><span class="nav-number">1.</span> <span class="nav-text">常用寄存器</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#FP-x29-%E5%AF%84%E5%AD%98%E5%99%A8"><span class="nav-number">1.1.</span> <span class="nav-text">FP(x29) 寄存器</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#LR-x30-%E5%AF%84%E5%AD%98%E5%99%A8"><span class="nav-number">1.2.</span> <span class="nav-text">LR(x30) 寄存器</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SP%E5%AF%84%E5%AD%98%E5%99%A8"><span class="nav-number">1.3.</span> <span class="nav-text">SP寄存器</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B8%B8%E7%94%A8%E6%8C%87%E4%BB%A4"><span class="nav-number">2.</span> <span class="nav-text">常用指令</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BC%AA%E6%93%8D%E4%BD%9C%E5%91%BD%E4%BB%A4"><span class="nav-number">2.1.</span> <span class="nav-text">伪操作命令</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#str-%E6%8C%87%E4%BB%A4"><span class="nav-number">2.2.</span> <span class="nav-text">str 指令</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#sub-%E6%8C%87%E4%BB%A4"><span class="nav-number">2.3.</span> <span class="nav-text">sub 指令</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#stp-%E6%8C%87%E4%BB%A4"><span class="nav-number">2.4.</span> <span class="nav-text">stp 指令</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#adrp-%E6%8C%87%E4%BB%A4"><span class="nav-number">2.5.</span> <span class="nav-text">adrp 指令</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Q-amp-A"><span class="nav-number">3.</span> <span class="nav-text">Q&amp;A</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#FP-x2F-SP-%E5%AF%84%E5%AD%98%E5%99%A8"><span class="nav-number">3.1.</span> <span class="nav-text">FP&#x2F;SP 寄存器</span></a></li></ol></li></ol></div>
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B8%B8%E7%94%A8%E5%AF%84%E5%AD%98%E5%99%A8"><span class="nav-number">1.</span> <span class="nav-text">常用寄存器</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B8%B8%E7%94%A8%E6%8C%87%E4%BB%A4"><span class="nav-number">2.</span> <span class="nav-text">常用指令</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BC%AA%E6%93%8D%E4%BD%9C%E5%91%BD%E4%BB%A4"><span class="nav-number">2.1.</span> <span class="nav-text">伪操作命令</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#mov-%E6%8C%87%E4%BB%A4"><span class="nav-number">2.2.</span> <span class="nav-text">mov 指令</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#str-%E6%8C%87%E4%BB%A4"><span class="nav-number">2.3.</span> <span class="nav-text">str 指令</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#stur-%E6%8C%87%E4%BB%A4"><span class="nav-number">2.4.</span> <span class="nav-text">stur 指令</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ldr-x2F-ldur-%E6%8C%87%E4%BB%A4"><span class="nav-number">2.5.</span> <span class="nav-text">ldr&#x2F;ldur 指令</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#sub-%E6%8C%87%E4%BB%A4"><span class="nav-number">2.6.</span> <span class="nav-text">sub 指令</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#stp-%E6%8C%87%E4%BB%A4"><span class="nav-number">2.7.</span> <span class="nav-text">stp 指令</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#adrp-%E6%8C%87%E4%BB%A4"><span class="nav-number">2.8.</span> <span class="nav-text">adrp 指令</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Q-amp-A"><span class="nav-number">3.</span> <span class="nav-text">Q&amp;A</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#FP-x2F-SP-%E5%AF%84%E5%AD%98%E5%99%A8"><span class="nav-number">3.1.</span> <span class="nav-text">FP&#x2F;SP 寄存器</span></a></li></ol></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -161,7 +161,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">26</span>
+          <span class="site-state-item-count">27</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
@@ -247,7 +247,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">Edited on</span>
-      <time title="Modified: 2022-08-08 09:38:22" itemprop="dateModified" datetime="2022-08-08T09:38:22+08:00">2022-08-08</time>
+      <time title="Modified: 2022-10-28 10:33:07" itemprop="dateModified" datetime="2022-10-28T10:33:07+08:00">2022-10-28</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -272,13 +272,23 @@
         <p>ARM64 汇编快速查阅表 – 持续更新…</p>
 <span id="more"></span>
 
-<h2 id="常用寄存器"><a href="#常用寄存器" class="headerlink" title="常用寄存器"></a>常用寄存器</h2><h3 id="FP-x29-寄存器"><a href="#FP-x29-寄存器" class="headerlink" title="FP(x29) 寄存器"></a>FP(x29) 寄存器</h3><p>64bit 栈底地址 通用寄存器</p>
-<h3 id="LR-x30-寄存器"><a href="#LR-x30-寄存器" class="headerlink" title="LR(x30) 寄存器"></a>LR(x30) 寄存器</h3><p>64bit 程序链接寄存器，保存了当前程序执行完毕后返回的地址</p>
-<h3 id="SP寄存器"><a href="#SP寄存器" class="headerlink" title="SP寄存器"></a>SP寄存器</h3><p>64bit 栈顶地址 专用寄存器</p>
+<h2 id="常用寄存器"><a href="#常用寄存器" class="headerlink" title="常用寄存器"></a>常用寄存器</h2><p>FP(x29) 寄存器：64bit 栈底地址 通用寄存器</p>
+<p>LR(x30) 寄存器：64bit 程序链接寄存器，保存了当前程序执行完毕后返回的地址</p>
+<p>SP寄存器：64bit 栈顶地址 专用寄存器</p>
+<p>w0寄存器：x0寄存器的低32位（以此类推）</p>
+<p>wzr寄存器：32位清零寄存器</p>
 <h2 id="常用指令"><a href="#常用指令" class="headerlink" title="常用指令"></a>常用指令</h2><h3 id="伪操作命令"><a href="#伪操作命令" class="headerlink" title="伪操作命令"></a>伪操作命令</h3><p>伪操作命令不是一个真正的命令，一般是在汇编代码中做标识符。例如对静态数据段中的数据类型进行描述</p>
 <p>dd命令: 双字型，即4个字节。<br>dq命令: 4字型，即8个字节。</p>
+<h3 id="mov-指令"><a href="#mov-指令" class="headerlink" title="mov 指令"></a>mov 指令</h3><p>把右操作数或者右寄存器内的值存入左侧寄存器内</p>
+<p><code>mov w9， #0x3ff</code><br><code>mov w9， x8</code></p>
 <h3 id="str-指令"><a href="#str-指令" class="headerlink" title="str 指令"></a>str 指令</h3><p>存储指令：将某个寄存器内的32位的值存到存储器中</p>
 <p><code>str x0, [x1], #0x8</code>; 将x0中的4字节写入x1指向地址的存储器内，并将(x1 + 0x8)这个新地址写入 x1<br><code>str x0, [x1, #0x8]</code>; 将x0中的4字节写入(x1 + 0x8)指向地址的存储器内</p>
+<h3 id="stur-指令"><a href="#stur-指令" class="headerlink" title="stur 指令"></a>stur 指令</h3><p>存储指令：将某个寄存器内的内容存储到右边的地址中</p>
+<p>C++ 局部变量定义</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">mov w11, #0x3</span><br><span class="line">stur w11, [x29, #-0x18]</span><br></pre></td></tr></table></figure>
+
+<h3 id="ldr-x2F-ldur-指令"><a href="#ldr-x2F-ldur-指令" class="headerlink" title="ldr&#x2F;ldur 指令"></a>ldr&#x2F;ldur 指令</h3><p>加载指令：将右边的地址中的值取出来放在左侧的寄存器内<br>ldr 的地址偏移值为正值，ldur 的地址偏移值为负值</p>
+<p><code>ldr w8, [x9]</code><br><code>ldur x9, [x29, #-0x20]</code></p>
 <h3 id="sub-指令"><a href="#sub-指令" class="headerlink" title="sub 指令"></a>sub 指令</h3><p>减法指令：</p>
 <p><code>sub x0, x1, x2</code> ; 将寄存器 x1 和 x2 的值相减后保存到寄存器 x0 中 </p>
 <h3 id="stp-指令"><a href="#stp-指令" class="headerlink" title="stp 指令"></a>stp 指令</h3><p>入栈指令：(str 指令的变种，可以同时操作两个寄存器)</p>
@@ -330,7 +340,7 @@
 
 <div class="copyright">
   &copy; 
-  <span itemprop="copyrightYear">2022</span>
+  <span itemprop="copyrightYear">2023</span>
   <span class="with-love">
     <i class="fa fa-heart"></i>
   </span>

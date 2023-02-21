@@ -157,7 +157,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">26</span>
+          <span class="site-state-item-count">27</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
@@ -197,6 +197,100 @@
 
 
     <div class="main-inner index posts-expand">
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2020/08/17/2020-08-17_db-system-design-imp(Pager)/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/timg.gif">
+      <meta itemprop="name" content="Caio">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Spade-Ace">
+      <meta itemprop="description" content="Spade-Ace&apos; Tech Blog">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="undefined | Spade-Ace">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/2020/08/17/2020-08-17_db-system-design-imp(Pager)/" class="post-title-link" itemprop="url">The Pager Module</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2020-08-17 00:00:00" itemprop="dateCreated datePublished" datetime="2020-08-17T00:00:00+08:00">2020-08-17</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2022-07-26 18:50:41" itemprop="dateModified" datetime="2022-07-26T18:50:41+08:00">2022-07-26</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/sqlite3/" itemprop="url" rel="index"><span itemprop="name">sqlite3</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <blockquote>
+<p>本文讨论的是SQLite的Pager模块。本模块在原生操作系统的基础上实现了一个抽象的基于页面的数据库文件系统。它按照固定大小的页面来管理数据，并且定义了一些接口从数据库文件中来操作这些页面。它提供了一个数据库页面的内存缓存，来帮助BTree模块加速操作数据库页面。它不仅仅是一个缓存的管理中心，同样也是实现ACID的事务管理中，以及事务回滚管理。并发控制和回滚机制对于上层模块来说是完全透明的。他可以理解为一个传统数据库管理系统的持久化层。</p>
+</blockquote>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2020/08/17/2020-08-17_db-system-design-imp(Pager)/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
 
     
 
@@ -1043,102 +1137,6 @@
 
 
 
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://blog.spade-ace.tech/2020/04/01/14.gomobile-bind/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/timg.gif">
-      <meta itemprop="name" content="Caio">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Spade-Ace">
-      <meta itemprop="description" content="Spade-Ace&apos; Tech Blog">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="undefined | Spade-Ace">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/2020/04/01/14.gomobile-bind/" class="post-title-link" itemprop="url">解析GoMobile生成的"胶水代码"</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">Posted on</span>
-
-      <time title="Created: 2020-04-01 00:00:00" itemprop="dateCreated datePublished" datetime="2020-04-01T00:00:00+08:00">2020-04-01</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar-check"></i>
-      </span>
-      <span class="post-meta-item-text">Edited on</span>
-      <time title="Modified: 2022-07-26 18:59:02" itemprop="dateModified" datetime="2022-07-26T18:59:02+08:00">2022-07-26</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">In</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/GoMobile/" itemprop="url" rel="index"><span itemprop="name">GoMobile</span></a>
-        </span>
-    </span>
-
-  
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <blockquote>
-<p>标题要唬人…在做Golang跨平台的时候，使用gomobile bind -target&#x3D;ios xxx 就可以生成对应平台的framework。</p>
-</blockquote>
-<p>本文讨论的内容是Golang是如何实现了OC和Go的数据通讯与接口调用，以及如何做到让开发者无感知的从OC对象的引用计数切换到Golang的垃圾回收机制。</p>
-<p>其实Go的语言层面的通讯实际上是由bind生成的中间层的代码来实现的，什么是中间层的代码？我们简单做实验…</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2020/04/01/14.gomobile-bind/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
   <nav class="pagination">
     <a class="extend prev" rel="prev" href="/"><i class="fa fa-angle-left" aria-label="Previous page"></i></a><a class="page-number" href="/">1</a><span class="page-number current">2</span><a class="page-number" href="/page/3/">3</a><a class="extend next" rel="next" href="/page/3/"><i class="fa fa-angle-right" aria-label="Next page"></i></a>
   </nav>
@@ -1152,7 +1150,7 @@
 
 <div class="copyright">
   &copy; 
-  <span itemprop="copyrightYear">2022</span>
+  <span itemprop="copyrightYear">2023</span>
   <span class="with-love">
     <i class="fa fa-heart"></i>
   </span>
